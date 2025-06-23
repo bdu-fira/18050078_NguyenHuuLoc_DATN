@@ -24,6 +24,9 @@ Trước khi chạy hệ thống, vui lòng thực hiện các bước sau:
    cp dashboard/example.env dashboard/.env
    cp nodejs-app/example.env nodejs-app/.env
    ```
+
+   hoặc
+
    ```bash
    chmod +x setup.sh
    ./setup.sh
