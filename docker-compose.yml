@@ -1,0 +1,61 @@
+services:
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard
+    restart: always
+    ports:
+      - "3001:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://nodejs-app:3000/api
+    depends_on:
+      - nodejs-app
+    networks:
+      - projects_default
+
+  nodejs-app:
+    build: ./nodejs-app
+    container_name: nodejs-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/nodejs-app
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - projects_default
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./nodejs-data/mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - projects_default
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http --domain=${NGROK_DOMAIN} nodejs-app:${NGROK_PORT}
+    depends_on:
+      - nodejs-app
+    networks:
+      - projects_default
+
+networks:
+  projects_default:
+    driver: bridge
