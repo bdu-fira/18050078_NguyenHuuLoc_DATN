@@ -12,7 +12,12 @@ const sensorDataRoutes = require('./routes/sensorDataRoutes');
 const app = express();
 
 // Middleware
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://34.87.37.168:3001/'
+  ]
+}));
 app.use(express.json());
 
 // MongoDB connection
