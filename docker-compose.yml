@@ -53,6 +53,7 @@ services:
     command: http --domain=${NGROK_DOMAIN} nodejs-app:${NGROK_PORT}
     depends_on:
       - nodejs-app
+      - dashboard
     networks:
       - projects_default
 
