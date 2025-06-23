@@ -80,7 +80,7 @@ const Dashboard = () => {
   const devices = useSelector(selectAllDevices);
 
   const handleDeviceClick = (deviceId) => {
-    navigate(`/device-detail/${deviceId}`);
+    navigate(`/devices/${deviceId}`);
   };
 
   const handleViewAllDevices = () => {
@@ -141,9 +141,9 @@ const Dashboard = () => {
                     key={device.id}
                     style={{
                       ...chartStyle.deviceItem,
-                      backgroundColor: window.location.pathname.includes(`/device-detail/${device.id}`) ? '#e6f7ff' : 'transparent'
+                      backgroundColor: window.location.pathname.includes(`/device-detail/${device.deviceId}`) ? '#e6f7ff' : 'transparent'
                     }}
-                    onClick={() => handleDeviceClick(device.id)}
+                    onClick={() => handleDeviceClick(device.deviceId)}
                   >
                     <div style={{
                       width: '12px',
@@ -177,12 +177,6 @@ const Dashboard = () => {
                 <Card
                   title={device.name}
                   style={chartStyle.deviceCard}
-                  headStyle={{
-                    borderBottom: '1px solid #f0f0f0',
-                    fontSize: '1.1rem',
-                    fontWeight: 500
-                  }}
-                  bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
                   <div style={{ marginBottom: '16px' }}>
                     <Row gutter={[16, 16]}>
