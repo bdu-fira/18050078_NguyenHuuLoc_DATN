@@ -8,3 +8,6 @@ cp dashboard/example.env dashboard/.env
 # Create nodejs-data
 mkdir nodejs-data
 chmod 777 nodejs-data
+
+# Show status
+echo "Setup complete!"

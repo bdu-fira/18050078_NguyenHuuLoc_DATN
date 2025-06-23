@@ -13,6 +13,4 @@ echo "Waiting for MongoDB to be ready..."
 sleep 5
 
 # Show status
-echo "Setup complete!"
-echo "Node.js app is running at http://localhost:3000"
-echo "MongoDB is running on port 27017"
+echo "All services are running!"
