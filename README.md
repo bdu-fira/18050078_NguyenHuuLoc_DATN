@@ -24,6 +24,10 @@ Trước khi chạy hệ thống, vui lòng thực hiện các bước sau:
    cp dashboard/example.env dashboard/.env
    cp nodejs-app/example.env nodejs-app/.env
    ```
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
+   ```
 
 2. **Cập nhật các thông số** trong các file .env vừa tạo nếu cần thiết.
 
@@ -32,8 +36,8 @@ Trước khi chạy hệ thống, vui lòng thực hiện các bước sau:
 Chạy script sau để khởi động toàn bộ hệ thống:
 
 ```bash
-chmod +x setup.sh
-./setup.sh
+chmod +x run.sh
+./run.sh
 ```
 
 Hoặc chạy trực tiếp bằng Docker Compose:
