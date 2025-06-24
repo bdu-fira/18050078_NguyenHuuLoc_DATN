@@ -7,6 +7,8 @@ cp dashboard/example.env dashboard/.env
 
 # Create nodejs-data
 mkdir nodejs-data
+sudo chown -R 999:999 ./nodejs-data
+sudo chmod -R 755 ./nodejs-data
 chmod 777 nodejs-data
 
 # Show status
