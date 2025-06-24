@@ -25,8 +25,8 @@ const AppMenu = (props) => {
       icon: <AppstoreOutlined />,
     },
     {
-      key: 'live-data',
-      label: 'Live Data',
+      key: 'sensor-data',
+      label: 'Dữ liệu cảm biến',
       icon: <PartitionOutlined />,
       children: devices.length > 0 ? devices.map(device => ({
         key: `device-${device._id}`,
