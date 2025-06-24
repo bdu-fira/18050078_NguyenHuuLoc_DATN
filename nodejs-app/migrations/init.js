@@ -20,11 +20,15 @@ async function initDatabase() {
     // Get the database connection
     const db = mongoose.connection.db;
     
-    // Check if collection exists
-    const collections = await db.listCollections({ name: 'sensors_data' }).toArray();
-    const collectionExists = collections.length > 0;
+    // Check if sensors_data collection exists
+    const sensorCollections = await db.listCollections({ name: 'sensors_data' }).toArray();
+    const sensorCollectionExists = sensorCollections.length > 0;
     
-    if (!collectionExists) {
+    // Check if devices collection exists
+    const deviceCollections = await db.listCollections({ name: 'devices' }).toArray();
+    const deviceCollectionExists = deviceCollections.length > 0;
+    
+    if (!sensorCollectionExists) {
       console.log('Creating sensors_data collection...');
       
       // Create the collection by inserting a dummy document
@@ -80,6 +84,46 @@ async function initDatabase() {
         console.log('Verified/created indexes on existing collection');
       } catch (error) {
         console.warn('Error creating indexes (they may already exist):', error.message);
+      }
+    }
+    
+    // Initialize devices collection if it doesn't exist
+    if (!deviceCollectionExists) {
+      console.log('Creating devices collection...');
+      
+      // Create the collection by inserting a sample device
+      await db.collection('devices').insertOne({
+        deviceId: 'sample-device-001',
+        location: {
+          lat: 10.762622,
+          lng: 106.660172
+        },
+        name: 'Sample Device',
+        description: 'Initial sample device',
+        sensorConfigurations: {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Create indexes for devices collection
+      await db.collection('devices').createIndex(
+        { deviceId: 1 },
+        { unique: true, background: true, name: 'deviceId_1' }
+      );
+      
+      console.log('Created devices collection with indexes');
+    } else {
+      console.log('devices collection already exists');
+      
+      // Ensure deviceId index exists
+      try {
+        await db.collection('devices').createIndex(
+          { deviceId: 1 },
+          { unique: true, background: true, name: 'deviceId_1' }
+        );
+        console.log('Verified/created indexes on devices collection');
+      } catch (error) {
+        console.warn('Error creating device indexes (they may already exist):', error.message);
       }
     }
     
