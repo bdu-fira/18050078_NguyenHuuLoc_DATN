@@ -1,82 +1,26 @@
 import React, { useState } from 'react';
-import { Card, Row, Col, Typography, Button, Divider } from 'antd';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { 
+  Row, 
+  Col, 
+  Typography, 
+  Button, 
+  Divider, 
+  Collapse, 
+  Card,
+  Statistic,
+  Space,
+  Layout
+} from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectAllDevices } from '../features/device/deviceSlice';
+import DeviceContent from '../components/Device/DeviceContent';
 
 const { Title, Text } = Typography;
-
-// Sample data for the charts
-const generateSampleData = () => {
-  return Array.from({ length: 24 }, (_, i) => ({
-    time: i,
-    value: 25 + Math.sin(i / 2) * 5 + (Math.random() * 2 - 1)
-  }));
-};
-
-const chartStyle = {
-  card: {
-    borderRadius: 12,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    border: 'none',
-    transition: 'all 0.3s ease'
-  },
-  chartContainer: {
-    width: '100%',
-    height: 150,
-    marginTop: 16
-  },
-  deviceCard: {
-    borderRadius: 12,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    border: 'none',
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12)'
-    }
-  },
-  sidebar: {
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: '16px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-  },
-  deviceItem: {
-    padding: '12px 16px',
-    margin: '4px 0',
-    borderRadius: 8,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    display: 'flex',
-    alignItems: 'center',
-    '&:hover': {
-      backgroundColor: '#f0f2f5',
-      transform: 'translateX(4px)'
-    }
-  },
-  viewAllBtn: {
-    marginTop: 'auto',
-    borderRadius: 8,
-    height: 40,
-    fontWeight: 500
-  }
-};
+const { Content } = Layout;
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [chartData] = useState(generateSampleData());
   const devices = useSelector(selectAllDevices);
 
   const handleDeviceClick = (deviceId) => {
@@ -87,202 +31,74 @@ const Dashboard = () => {
     navigate('/devices');
   };
 
+  const listDevicesColapse = devices.map((device) => {
+    return {
+      key: device.deviceId,
+      label: device.name,
+      children: <DeviceContent device={device} />,
+    };
+  });
+
   return (
-    <div style={{
-      padding: '24px',
-      maxWidth: '1200px',
-      margin: '0 auto',
-      minHeight: '100vh'
-    }}>
-      <Title level={3} style={{
-        marginBottom: '24px',
-        textAlign: 'center',
-        color: '#1a1a1a',
-        fontWeight: 600
-      }}>
+    <Content className="site-layout" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <Title level={3} style={{ marginBottom: 24, textAlign: 'center' }}>
         DASHBOARD
       </Title>
 
-      <Row gutter={[24, 24]} style={{ height: '100%' }}>
+      <Row gutter={[24, 24]}>
         {/* Left Sidebar */}
         <Col xs={24} md={8}>
-          <div style={chartStyle.sidebar}>
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{
-                fontSize: '0.9rem',
-                color: '#666',
-                marginBottom: '8px'
-              }}>
-                Tổng số thiết bị
-              </div>
-              <div style={{
-                fontSize: '2rem',
-                fontWeight: 'bold',
-                color: '#1890ff'
-              }}>
-                {devices.length}
-              </div>
-            </div>
+          <Card 
+            className="site-layout-background" 
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          >
+            <Statistic 
+              title="Tổng số thiết bị" 
+              value={devices.length} 
+              valueStyle={{ color: '#1890ff' }}
+              style={{ marginBottom: 24 }}
+            />
 
             <Divider style={{ margin: '16px 0' }} />
 
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{
-                fontSize: '1rem',
-                fontWeight: 500,
-                marginBottom: '12px',
-                color: '#1a1a1a'
-              }}>
+            <div style={{ marginBottom: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Text strong style={{ marginBottom: 12, fontSize: 16 }}>
                 Danh sách thiết bị
-              </div>
-              <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
-                {devices.map(device => (
-                  <div
-                    key={device.id}
-                    style={{
-                      ...chartStyle.deviceItem,
-                      backgroundColor: window.location.pathname.includes(`/device-detail/${device.deviceId}`) ? '#e6f7ff' : 'transparent'
-                    }}
-                    onClick={() => handleDeviceClick(device.deviceId)}
-                  >
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      backgroundColor: '#52c41a',
-                      marginRight: '12px'
-                    }} />
-                    <span>{device.name}</span>
-                  </div>
-                ))}
+              </Text>
+              <div style={{ flex: 1, overflow: 'auto', paddingRight: 8 }}>
+                <Collapse 
+                  items={listDevicesColapse} 
+                  defaultActiveKey={[]}
+                  ghost
+                />
               </div>
             </div>
 
             <Button
               type="primary"
               block
-              style={chartStyle.viewAllBtn}
               onClick={handleViewAllDevices}
+              style={{ marginTop: 'auto' }}
             >
               Xem tất cả thiết bị
             </Button>
-          </div>
+          </Card>
         </Col>
+
 
         {/* Right Content */}
         <Col xs={24} md={16}>
-          <Row gutter={[16, 16]}>
-            {devices.map(device => (
-              <Col xs={24} key={device.id}>
-                <Card
-                  title={device.name}
-                  style={chartStyle.deviceCard}
-                >
-                  <div style={{ marginBottom: '16px' }}>
-                    <Row gutter={[16, 16]}>
-                      <Col xs={24} sm={8}>
-                        <div style={{
-                          padding: '16px',
-                          backgroundColor: '#fff7e6',
-                          borderRadius: 8,
-                          textAlign: 'center',
-                          border: '1px solid #ffe7ba'
-                        }}>
-                          <div style={{ fontSize: '0.9rem', color: '#d46b08' }}>Nhiệt độ</div>
-                          <div style={{
-                            fontSize: '1.5rem',
-                            fontWeight: 'bold',
-                            color: '#d46b08'
-                          }}>
-                            {device.temp}°C
-                          </div>
-                        </div>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <div style={{
-                          padding: '16px',
-                          backgroundColor: '#e6f7ff',
-                          borderRadius: 8,
-                          textAlign: 'center',
-                          border: '1px solid #91d5ff'
-                        }}>
-                          <div style={{ fontSize: '0.9rem', color: '#096dd9' }}>Độ ẩm</div>
-                          <div style={{
-                            fontSize: '1.5rem',
-                            fontWeight: 'bold',
-                            color: '#096dd9'
-                          }}>
-                            {device.humidity}%
-                          </div>
-                        </div>
-                      </Col>
-                      <Col xs={24} sm={8}>
-                        <div style={{
-                          padding: '16px',
-                          backgroundColor: '#f6ffed',
-                          borderRadius: 8,
-                          textAlign: 'center',
-                          border: '1px solid #b7eb8f'
-                        }}>
-                          <div style={{ fontSize: '0.9rem', color: '#389e0d' }}>CO₂</div>
-                          <div style={{
-                            fontSize: '1.5rem',
-                            fontWeight: 'bold',
-                            color: '#389e0d'
-                          }}>
-                            {device.co2}ppm
-                          </div>
-                        </div>
-                      </Col>
-                    </Row>
-                  </div>
-
-                  <div style={{ flex: 1, minHeight: '150px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis
-                          dataKey="time"
-                          tick={{ fontSize: 10, fill: '#8c8c8c' }}
-                          tickMargin={4}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 10, fill: '#8c8c8c' }}
-                          width={30}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            borderRadius: 8,
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                            border: 'none'
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#1890ff"
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{
-                            r: 4,
-                            stroke: '#fff',
-                            strokeWidth: 2
-                          }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
-              </Col>
-            ))}
-          </Row>
+          <Card 
+            className="site-layout-background" 
+            style={{ height: '100%' }}
+          >
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Text type="secondary">Chọn một thiết bị để xem chi tiết</Text>
+            </div>
+          </Card>
         </Col>
       </Row>
-    </div>
+    </Content>
   );
 };
 

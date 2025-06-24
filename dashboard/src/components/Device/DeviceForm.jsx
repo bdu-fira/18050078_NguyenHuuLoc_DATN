@@ -1,97 +1,20 @@
 import React, { useEffect } from 'react';
 import { Form, Input, InputNumber, Modal, message, Checkbox, Row, Col, Divider, Card, Typography, Space } from 'antd';
-import { 
-  FireOutlined, 
-  CloudOutlined, 
-  DashboardOutlined, 
-  AlertOutlined, 
-  EnvironmentOutlined,
-  ThunderboltOutlined,
-  CloudServerOutlined,
-  CloudSyncOutlined
-} from '@ant-design/icons';
+import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../../constants/sensors';
 import { useDispatch } from 'react-redux';
 import { addNewDevice, updateDeviceById } from '../../features/device/deviceSlice';
 
 const { Text } = Typography;
 
-const sensorOptions = [
-  { 
-    name: 'temperature', 
-    label: 'Nhiệt độ', 
-    unit: '°C',
-    icon: <FireOutlined style={{ color: '#ff4d4f' }} />,
-    category: 'environment'
-  },
-  { 
-    name: 'humidity', 
-    label: 'Độ ẩm', 
-    unit: '%',
-    icon: <CloudOutlined style={{ color: '#1890ff' }} />,
-    category: 'environment'
-  },
-  { 
-    name: 'co2', 
-    label: 'CO₂', 
-    unit: 'ppm',
-    icon: <DashboardOutlined style={{ color: '#52c41a' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'pm25', 
-    label: 'Bụi PM2.5', 
-    unit: 'µg/m³',
-    icon: <AlertOutlined style={{ color: '#faad14' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'pm10', 
-    label: 'Bụi PM10', 
-    unit: 'µg/m³',
-    icon: <AlertOutlined style={{ color: '#fa8c16' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'voc', 
-    label: 'VOC', 
-    unit: 'ppb',
-    icon: <ThunderboltOutlined style={{ color: '#722ed1' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'o3', 
-    label: 'O₃', 
-    unit: 'ppb',
-    icon: <CloudServerOutlined style={{ color: '#13c2c2' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'no2', 
-    label: 'NO₂', 
-    unit: 'ppb',
-    icon: <EnvironmentOutlined style={{ color: '#eb2f96' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'so2', 
-    label: 'SO₂', 
-    unit: 'ppb',
-    icon: <CloudSyncOutlined style={{ color: '#f5222d' }} />,
-    category: 'air_quality'
-  },
-  { 
-    name: 'aqi', 
-    label: 'Chỉ số AQI',
-    unit: '',
-    icon: <DashboardOutlined style={{ color: '#52c41a' }} />,
-    category: 'air_quality'
-  },
-];
+const categoryLabels = SENSOR_CATEGORIES;
 
-const categoryLabels = {
-  environment: 'Môi trường',
-  air_quality: 'Chất lượng không khí'
-};
+// Create a new array with icon components
+const sensorOptions = SENSOR_OPTIONS.map(sensor => ({
+  ...sensor,
+  icon: React.createElement(sensor.icon, { 
+    style: { color: sensor.color } 
+  })
+}));
 
 const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSuccess }) => {
   const [form] = Form.useForm();
