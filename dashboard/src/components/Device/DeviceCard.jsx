@@ -40,16 +40,16 @@ const DeviceCard = ({ device, onEdit, onDelete }) => {
     <Card
       style={{ width: 300 }}
       loading={loading}
-      cover={
-        <div style={{ height: '160px', overflow: 'hidden' }}>
-          {/* <GoogleMap 
-            lat={device?.location?.lat} 
-            lng={device?.location?.lng} 
-            height="100%"
-            zoom={15}
-          /> */}
-        </div>
-      }
+      // cover={
+      //   <div style={{ height: '160px', overflow: 'hidden' }}>
+      //     {/* <GoogleMap 
+      //       lat={device?.location?.lat} 
+      //       lng={device?.location?.lng} 
+      //       height="100%"
+      //       zoom={15}
+      //     /> */}
+      //   </div>
+      // }
       actions={[
         <Tooltip title="Edit Device" key="edit">
           <EditOutlined onClick={handleEdit} />

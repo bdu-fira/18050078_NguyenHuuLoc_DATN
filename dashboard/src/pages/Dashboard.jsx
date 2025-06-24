@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectAllDevices } from '../features/device/deviceSlice';
 import DeviceContent from '../components/Device/DeviceContent';
+import GoogleMap from '../components/GoogleMap';
 
 const { Title, Text } = Typography;
 const { Content } = Layout;
@@ -41,10 +42,6 @@ const Dashboard = () => {
 
   return (
     <Content className="site-layout" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Title level={3} style={{ marginBottom: 24, textAlign: 'center' }}>
-        DASHBOARD
-      </Title>
-
       <Row gutter={[24, 24]}>
         {/* Left Sidebar */}
         <Col xs={24} md={8}>
@@ -69,7 +66,6 @@ const Dashboard = () => {
                 <Collapse 
                   items={listDevicesColapse} 
                   defaultActiveKey={[]}
-                  ghost
                 />
               </div>
             </div>
@@ -90,11 +86,9 @@ const Dashboard = () => {
         <Col xs={24} md={16}>
           <Card 
             className="site-layout-background" 
-            style={{ height: '100%' }}
+            style={{ height: '100%', minHeight: '500px' }}
           >
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Text type="secondary">Chọn một thiết bị để xem chi tiết</Text>
-            </div>
+            <GoogleMap />
           </Card>
         </Col>
       </Row>
