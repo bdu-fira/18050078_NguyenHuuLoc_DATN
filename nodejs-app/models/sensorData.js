@@ -83,7 +83,33 @@ sensorDataSchema.index({ location: '2dsphere' });
 // Create compound index for common query patterns
 sensorDataSchema.index({ deviceId: 1, timestamp: -1 });
 
-// Note: Removed text index on metadata as it's not supported with Map type
 // Create model if it doesn't exist to prevent OverwriteModelError
-module.exports = mongoose.models.SensorData || 
+const SensorData = mongoose.models.SensorData || 
   mongoose.model('SensorsData', sensorDataSchema);
+
+// Ensure no TTL indexes exist on this collection
+const removeTTLIndexes = async () => {
+  try {
+    const collection = mongoose.connection.db.collection('sensors_data');
+    const indexes = await collection.indexes();
+    
+    for (const index of indexes) {
+      // Check if this is a TTL index
+      if (index.expireAfterSeconds) {
+        await collection.dropIndex(index.name);
+        console.log(`Dropped TTL index: ${index.name} from sensors_data`);
+      }
+    }
+  } catch (error) {
+    console.error('Error removing TTL indexes from sensors_data:', error);
+  }
+};
+
+// Run this when the model is loaded
+if (mongoose.connection.readyState === 1) { // 1 = connected
+  removeTTLIndexes();
+} else {
+  mongoose.connection.once('open', removeTTLIndexes);
+}
+
+module.exports = SensorData;

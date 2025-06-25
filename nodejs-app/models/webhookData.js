@@ -35,4 +35,33 @@ const webhookDataSchema = new mongoose.Schema({
 webhookDataSchema.index({ eventType: 1, receivedAt: -1 });
 webhookDataSchema.index({ source: 1, receivedAt: -1 });
 
-module.exports = mongoose.model('WebhookData', webhookDataSchema);
+// Create model if it doesn't exist to prevent OverwriteModelError
+const WebhookData = mongoose.models.WebhookData || 
+  mongoose.model('WebhookData', webhookDataSchema);
+
+// Ensure no TTL indexes exist on this collection
+const removeTTLIndexes = async () => {
+  try {
+    const collection = mongoose.connection.db.collection('webhookdata');
+    const indexes = await collection.indexes();
+    
+    for (const index of indexes) {
+      // Check if this is a TTL index
+      if (index.expireAfterSeconds) {
+        await collection.dropIndex(index.name);
+        console.log(`Dropped TTL index: ${index.name} from webhookdata`);
+      }
+    }
+  } catch (error) {
+    console.error('Error removing TTL indexes from webhookdata:', error);
+  }
+};
+
+// Run this when the model is loaded
+if (mongoose.connection.readyState === 1) { // 1 = connected
+  removeTTLIndexes();
+} else {
+  mongoose.connection.once('open', removeTTLIndexes);
+}
+
+module.exports = WebhookData;
