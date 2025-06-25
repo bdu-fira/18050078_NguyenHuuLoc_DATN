@@ -3,7 +3,7 @@ const Device = require('../models/device');
 // Create a new device
 exports.createDevice = async (req, res) => {
   try {
-    const { deviceId, name, description, location, sensors = [], ...sensorConfigs } = req.body;
+    const { deviceId, name, description, location, sensors = {} } = req.body;
     
     // Check if device with the same deviceId already exists
     const existingDevice = await Device.findOne({ deviceId });
@@ -14,26 +14,18 @@ exports.createDevice = async (req, res) => {
       });
     }
 
-    // Prepare sensor configurations
-    const sensorConfigurations = {};
-    sensors.forEach(sensor => {
-      sensorConfigurations[sensor] = {
-        min: sensorConfigs[`${sensor}_min`] || 0,
-        max: sensorConfigs[`${sensor}_max`] || 100
-      };
-    });
+    // Create sensors map from the sensors object
+    const sensorsMap = new Map(Object.entries(sensors));
 
     const device = new Device({
       deviceId,
       name,
       description: description || '',
-      sensors,
-      sensorConfigurations,
+      sensors: sensorsMap,
       location: {
         lat: parseFloat(location.lat),
         lng: parseFloat(location.lng)
-      },
-      ...sensorConfigs // Include all sensor min/max values
+      }
     });
 
     await device.save();
@@ -115,7 +107,7 @@ exports.getDevice = async (req, res) => {
 exports.updateDevice = async (req, res) => {
   try {
     const { deviceId } = req.query;
-    const { name, description, location, sensors = [], ...sensorConfigs } = req.body;
+    const { name, description, location, sensors = {} } = req.body;
     
     if (!deviceId) {
       return res.status(400).json({
@@ -124,28 +116,18 @@ exports.updateDevice = async (req, res) => {
       });
     }
     
+    // Create sensors map from the sensors object
+    const sensorsMap = new Map(Object.entries(sensors));
+    
     const updateData = {
       name,
       description,
-      sensors,
-      ...sensorConfigs
+      location: {
+        lat: parseFloat(location.lat),
+        lng: parseFloat(location.lng)
+      },
+      sensors: sensorsMap
     };
-    
-    // Update location if provided
-    if (location) {
-      updateData['location.lat'] = parseFloat(location.lat);
-      updateData['location.lng'] = parseFloat(location.lng);
-    }
-    
-    // Update sensor configurations
-    const sensorConfigurations = {};
-    sensors.forEach(sensor => {
-      sensorConfigurations[sensor] = {
-        min: sensorConfigs[`${sensor}_min`] || 0,
-        max: sensorConfigs[`${sensor}_max`] || 100
-      };
-    });
-    updateData.sensorConfigurations = sensorConfigurations;
     
     const updatedDevice = await Device.findOneAndUpdate(
       { deviceId },

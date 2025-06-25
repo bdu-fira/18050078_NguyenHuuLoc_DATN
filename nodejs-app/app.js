@@ -13,7 +13,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://34.87.37.168:3001'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://34.87.37.168:3001', 'http://localhost:3001'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -35,16 +35,16 @@ mongoose.connect(MONGODB_URI, {
   keepAlive: true,
   keepAliveInitialDelay: 300000
 })
-.then(() => {
-  console.log('Connected to MongoDB');
-  
-  // Start cron jobs after database is initialized
-  // start();
-})
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
+  .then(() => {
+    console.log('Connected to MongoDB');
+
+    // Start cron jobs after database is initialized
+    // start();
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 // Handle connection errors
 mongoose.connection.on('error', (err) => {
@@ -78,7 +78,7 @@ app.get('/api/cron/status', (req, res) => {
 });
 
 // Webhook endpoints
-app.post('/api/webhooks', 
+app.post('/api/webhooks',
   express.json({ limit: '10mb' }), // Increase payload size limit for webhooks
   webhookController.handleWebhook
 );

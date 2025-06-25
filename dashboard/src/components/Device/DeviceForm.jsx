@@ -20,42 +20,29 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
   const [form] = Form.useForm();
   const dispatch = useDispatch();
   const [loading, setLoading] = React.useState(false);
-  const [selectedSensors, setSelectedSensors] = React.useState([]);
+  const [selectedSensors, setSelectedSensors] = React.useState({});
 
   // Set form initial values
   useEffect(() => {
     if (open) {
-      // Get sensors from sensorConfigurations if available, otherwise use sensors array
-      const sensors = initialValues?.sensorConfigurations 
-        ? Object.keys(initialValues.sensorConfigurations) 
-        : initialValues?.sensors || [];
-      
-      setSelectedSensors(sensors);
-      
       const formValues = {
-        deviceId: initialValues?.deviceId || '',
         name: initialValues?.name || '',
         description: initialValues?.description || '',
-        location: {
-          lat: initialValues?.location?.lat || 0,
-          lng: initialValues?.location?.lng || 0,
-        },
-        sensors, // This will set the checkboxes
+        deviceId: initialValues?.deviceId || '',
+        location: initialValues?.location || { lat: 0, lng: 0 }
       };
 
-      // Add min/max values for each sensor
-      sensors.forEach(sensor => {
-        if (initialValues?.sensorConfigurations?.[sensor]) {
-          formValues[`${sensor}_min`] = initialValues.sensorConfigurations[sensor].min;
-          formValues[`${sensor}_max`] = initialValues.sensorConfigurations[sensor].max;
-        } else {
-          // Fallback to direct properties if sensorConfigurations is not available
-          formValues[`${sensor}_min`] = initialValues?.[`${sensor}_min`] || 0;
-          formValues[`${sensor}_max`] = initialValues?.[`${sensor}_max`] || 100;
-        }
-      });
+      // Process sensor values
+      const sensorValues = initialValues?.sensors || {};
       
-      // Use setTimeout to ensure the form is mounted before setting values
+      // Set sensor values in form
+      Object.entries(sensorValues).forEach(([sensor, value]) => {
+        formValues[sensor] = value;
+      });
+
+      // Initialize selectedSensors with sensors that have values
+      setSelectedSensors(sensorValues);
+      
       const timer = setTimeout(() => {
         if (form && typeof form.setFieldsValue === 'function') {
           form.setFieldsValue(formValues);
@@ -68,43 +55,60 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
       if (form && typeof form.resetFields === 'function') {
         form.resetFields();
       }
-      setSelectedSensors([]);
+      setSelectedSensors({});
     }
   }, [open, initialValues, form]);
 
   const handleSensorToggle = (sensorName) => {
-    const newSelected = selectedSensors.includes(sensorName)
-      ? selectedSensors.filter(s => s !== sensorName)
-      : [...selectedSensors, sensorName];
+    const isCurrentlySelected = selectedSensors.hasOwnProperty(sensorName);
+    const newSelected = { ...selectedSensors };
+    
+    if (isCurrentlySelected) {
+      // Remove sensor
+      delete newSelected[sensorName];
+      // Clear the sensor's value when unselected
+      form.setFieldsValue({ [sensorName]: undefined });
+    } else {
+      // Add sensor with default value
+      newSelected[sensorName] = 50; // Default value for new sensor
+      form.setFieldsValue({ [sensorName]: 50 });
+    }
+    
     setSelectedSensors(newSelected);
-    form.setFieldsValue({ sensors: newSelected });
   };
 
-  const handleThresholdChange = (sensorName, field, value) => {
+  const handleThresholdChange = (sensorName, value) => {
+    // Update both the form value and the selectedSensors state
     form.setFieldsValue({
-      [`${sensorName}_${field}`]: value
+      [sensorName]: value
     });
+    
+    // Also update the selectedSensors state to keep it in sync
+    setSelectedSensors(prev => ({
+      ...prev,
+      [sensorName]: value
+    }));
   };
 
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
       
+      // Use the selectedSensors object directly since it's already in sync with the form
+      const sensors = { ...selectedSensors };
+      
       // Prepare device data
       const deviceData = {
         name: values.name,
-        description: values.description,
-        location: values.location?.lat ? {
-          lat: parseFloat(values.location.lat),
-          lng: parseFloat(values.location.lng)
-        } : null,
-        sensors: selectedSensors,
-        ...selectedSensors.reduce((acc, sensor) => {
-          acc[`${sensor}_min`] = values[`${sensor}_min`] || 0;
-          acc[`${sensor}_max`] = values[`${sensor}_max`] || 0;
-          return acc;
-        }, {})
+        description: values.description || '',
+        location: {
+          lat: parseFloat(values.location?.lat) || 0,
+          lng: parseFloat(values.location?.lng) || 0
+        },
+        sensors
       };
+      
+      console.log('Submitting device data:', deviceData);
 
       if (isEditing && initialValues?.deviceId) {
         await dispatch(updateDeviceById({
@@ -130,35 +134,6 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     }
   };
 
-  const renderSensorInputs = () => {
-    return selectedSensors.map(sensor => {
-      const option = sensorOptions.find(opt => opt.name === sensor);
-      if (!option) return null;
-      
-      return (
-        <Row gutter={16} key={sensor} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Form.Item
-              label={`Ngưỡng dưới ${option.label}`}
-              name={`${sensor}_min`}
-              rules={[{ required: true, message: 'Bắt buộc' }]}
-            >
-              <InputNumber style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              label={`Ngưỡng trên ${option.label}`}
-              name={`${sensor}_max`}
-              rules={[{ required: true, message: 'Bắt buộc' }]}
-            >
-              <InputNumber style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
-      );
-    });
-  };
 
   return (
     <Modal
@@ -343,12 +318,12 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
                             border: '1px solid #f0f0f0',
                             borderRadius: 8,
                             transition: 'all 0.3s',
-                            backgroundColor: selectedSensors.includes(sensor.name) ? '#f6ffed' : '#fafafa',
-                            borderColor: selectedSensors.includes(sensor.name) ? '#b7eb8f' : '#f0f0f0',
+                            backgroundColor: selectedSensors.hasOwnProperty(sensor.name) ? '#f6ffed' : '#fafafa',
+                            borderColor: selectedSensors.hasOwnProperty(sensor.name) ? '#b7eb8f' : '#f0f0f0',
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
-                            opacity: selectedSensors.includes(sensor.name) ? 1 : 0.8
+                            opacity: selectedSensors.hasOwnProperty(sensor.name) ? 1 : 0.8
                           }}
                           styles={{
                             body: {
@@ -369,7 +344,7 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
                             onClick={() => handleSensorToggle(sensor.name)}
                           >
                             <Checkbox 
-                              checked={selectedSensors.includes(sensor.name)}
+                              checked={selectedSensors.hasOwnProperty(sensor.name)}
                               style={{ marginTop: '2px', marginRight: '12px' }}
                               onClick={e => e.stopPropagation()}
                               onChange={e => handleSensorToggle(sensor.name)}
@@ -391,28 +366,17 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
                           
                           <div style={{ width: '100%' }}>
                             <div style={{ fontSize: '12px', marginBottom: '4px', color: '#666' }}>Ngưỡng cảnh báo</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#8c8c8c', marginBottom: '2px' }}>Tối thiểu</div>
-                                <InputNumber 
-                                  size="small"
-                                  disabled={!selectedSensors.includes(sensor.name)}
-                                  style={{ width: '100%' }}
-                                  value={form.getFieldValue(`${sensor.name}_min`) || 0}
-                                  onChange={(value) => handleThresholdChange(sensor.name, 'min', value)}
-                                />
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#8c8c8c', marginBottom: '2px' }}>Tối đa</div>
-                                <InputNumber 
-                                  size="small"
-                                  disabled={!selectedSensors.includes(sensor.name)}
-                                  style={{ width: '100%' }}
-                                  value={form.getFieldValue(`${sensor.name}_max`) || 100}
-                                  onChange={(value) => handleThresholdChange(sensor.name, 'max', value)}
-                                />
-                              </div>
-                            </div>
+                            <InputNumber 
+                              size="small"
+                              disabled={!selectedSensors.hasOwnProperty(sensor.name)}
+                              style={{ width: '100%' }}
+                              min={0}
+                              max={sensor.name === 'temperature' ? 100 : 1000} // Adjust max based on sensor type
+                              formatter={value => `${value}${sensor.unit ? ` ${sensor.unit}` : ''}`}
+                              parser={value => value.replace(new RegExp(`\\s*${sensor.unit || ''}$`), '')}
+                              value={selectedSensors[sensor.name] || 50}
+                              onChange={(value) => handleThresholdChange(sensor.name, value)}
+                            />
                           </div>
                         </Card>
                       </div>

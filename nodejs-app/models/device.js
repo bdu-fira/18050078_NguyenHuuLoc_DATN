@@ -35,8 +35,11 @@ const deviceSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  sensorConfigurations: {
-    type: Object,
+  // Sensor values object
+  // Format: { temperature: number, humidity: number, ... }
+  sensors: {
+    type: Map,
+    of: Number,
     default: {}
   }
 }, {

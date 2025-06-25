@@ -460,9 +460,9 @@ const DeviceDetail = () => {
             label: 'Tổng quan',
             children: (
               <Row gutter={[24, 24]}>
-                {device?.sensorConfigurations && Object.entries(device.sensorConfigurations).map(([sensorKey, sensorConfig]) => {
+                {device?.sensors && Object.entries(device.sensors).map(([sensorKey, threshold]) => {
                   const config = chartConfigs[sensorKey];
-                  if (!config || !sensorConfig) return null;
+                  if (!config) return null;
 
                   return (
                     <Col key={sensorKey} xs={24} md={12} lg={8}>
@@ -471,7 +471,7 @@ const DeviceDetail = () => {
                         dataKey={config.dataKey}
                         color={config.color}
                         unit={config.unit}
-                        domain={[sensorConfig.min || 0, sensorConfig.max || 100]}
+                        domain={[0, threshold * 1.5]} // Set domain based on threshold
                         data={sensorData}
                         avgValue={sensorAverages[sensorKey]}
                       >
@@ -485,34 +485,21 @@ const DeviceDetail = () => {
                           activeDot={{ r: 6 }}
                           unit={config.unit}
                         />
-                        {/* Add threshold line for certain sensors */}
-                        {sensorKey === 'co2' && (
-                          <Line 
-                            type="monotone" 
-                            dataKey={() => 1000} 
-                            name="Ngưỡng an toàn" 
-                            stroke="#faad14" 
-                            strokeDasharray="5 5"
-                            dot={false}
-                            strokeWidth={1}
-                          />
-                        )}
-                        {sensorKey === 'battery' && (
-                          <Line 
-                            type="monotone" 
-                            dataKey={() => 3.3} 
-                            name="Ngưỡng thấp" 
-                            stroke="#ff4d4f" 
-                            strokeDasharray="5 5"
-                            dot={false}
-                            strokeWidth={1}
-                          />
-                        )}
+                        {/* Threshold line */}
+                        <Line 
+                          type="monotone" 
+                          dataKey={() => threshold} 
+                          name="Ngưỡng cảnh báo" 
+                          stroke="#faad14" 
+                          strokeDasharray="5 5"
+                          dot={false}
+                          strokeWidth={1}
+                        />
                       </ChartCard>
                     </Col>
                   );
                 })}
-                {(!device?.sensorConfigurations || Object.keys(device.sensorConfigurations).length === 0) && (
+                {(!device?.sensors || Object.keys(device.sensors).length === 0) && (
                   <Col span={24}>
                     <Empty description="Không có cảm biến nào được cấu hình cho thiết bị này" />
                   </Col>
