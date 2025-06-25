@@ -12,8 +12,8 @@ RUN npm install
 # Bundle app source
 COPY . .
 
-# Run migrations on startup
-CMD ["sh", "-c", "node migrations/init.js && npm start"]
+# Start the application
+CMD ["npm", "start"]
 
 # Expose the application port
 EXPOSE 3000
