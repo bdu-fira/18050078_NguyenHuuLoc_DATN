@@ -35,7 +35,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ./nodejs-data/mongodb:/data/db
+      - mongodb-data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -60,3 +60,6 @@ services:
 networks:
   projects_default:
     driver: bridge
+
+volumes:
+  mongodb-data:
