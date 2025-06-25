@@ -42,18 +42,29 @@ const WebhookData = mongoose.models.WebhookData ||
 // Ensure no TTL indexes exist on this collection
 const removeTTLIndexes = async () => {
   try {
-    const collection = mongoose.connection.db.collection('webhookdata');
-    const indexes = await collection.indexes();
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections({ name: 'webhookdata' }).toArray();
     
-    for (const index of indexes) {
-      // Check if this is a TTL index
-      if (index.expireAfterSeconds) {
-        await collection.dropIndex(index.name);
-        console.log(`Dropped TTL index: ${index.name} from webhookdata`);
+    // Only proceed if the collection exists
+    if (collections.length > 0) {
+      const collection = db.collection('webhookdata');
+      const indexes = await collection.indexes();
+      
+      for (const index of indexes) {
+        // Check if this is a TTL index and it's not the _id_ index
+        if (index.expireAfterSeconds && index.name !== '_id_') {
+          await collection.dropIndex(index.name);
+          console.log(`Dropped TTL index: ${index.name} from webhookdata`);
+        }
       }
+    } else {
+      console.log('Webhookdata collection does not exist yet, skipping TTL index check');
     }
   } catch (error) {
-    console.error('Error removing TTL indexes from webhookdata:', error);
+    // Ignore NamespaceNotFound errors
+    if (error.code !== 26) {
+      console.error('Error removing TTL indexes from webhookdata:', error);
+    }
   }
 };
 
