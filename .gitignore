@@ -3,3 +3,4 @@ nodejs-app/node_modules
 dashboard/node_modules
 
 .env
+mongo_data

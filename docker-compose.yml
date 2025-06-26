@@ -38,6 +38,11 @@ services:
       - ./mongo_data:/data/db
     networks:
       - projects_default
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ngrok:
     image: ngrok/ngrok:latest
