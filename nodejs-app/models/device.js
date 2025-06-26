@@ -10,11 +10,13 @@ const deviceSchema = new mongoose.Schema({
   location: {
     lat: {
       type: Number,
-      required: true
+      required: false,
+      default: 0
     },
     lng: {
       type: Number,
-      required: true
+      required: false,
+      default: 0
     }
   },
   name: {

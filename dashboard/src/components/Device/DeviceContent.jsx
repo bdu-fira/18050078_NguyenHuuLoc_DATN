@@ -13,7 +13,7 @@ const DeviceContent = ({ device }) => {
   return (
     <div style={{ textAlign: 'start' }}>
       <Space direction="horizontal" size="small" style={{ flexWrap: 'wrap' }}>
-        {Object.keys(device?.sensorConfigurations || {}).map((key) => {
+        {Object.keys(device?.sensors || {}).map((key) => {
           const sensor = getSensorConfig(key);
           const IconComponent = sensor.icon;
 

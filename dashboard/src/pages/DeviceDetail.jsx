@@ -123,7 +123,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgValue }) => {
+const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgValue, threshold }) => {
   // Get the data from props or children
   const chartData = data || children?.props?.data || [];
   
@@ -181,17 +181,31 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
               />
               <Legend />
               {dataKey ? (
-                <Line 
-                  type="monotone" 
-                  dataKey={dataKey}
-                  name={title}
-                  stroke={color}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 6 }}
-                  unit={unit}
-                  isAnimationActive={false}
-                />
+                <>
+                  <Line 
+                    type="monotone" 
+                    dataKey={dataKey}
+                    name={title}
+                    stroke={color}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 6 }}
+                    unit={unit}
+                    isAnimationActive={false}
+                  />
+                  {threshold !== undefined && (
+                    <Line 
+                      type="monotone" 
+                      dataKey={() => threshold} 
+                      name="Ngưỡng cảnh báo" 
+                      stroke="#faad14" 
+                      strokeDasharray="5 5"
+                      dot={false}
+                      strokeWidth={1}
+                      isAnimationActive={false}
+                    />
+                  )}
+                </>
               ) : (
                 React.Children.map(children, child => 
                   child && React.cloneElement(child, { data: chartData })
@@ -471,9 +485,10 @@ const DeviceDetail = () => {
                         dataKey={config.dataKey}
                         color={config.color}
                         unit={config.unit}
-                        domain={[0, threshold * 1.5]} // Set domain based on threshold
+                        domain={[0, threshold * 1.5]} 
                         data={sensorData}
                         avgValue={sensorAverages[sensorKey]}
+                        threshold={threshold}
                       >
                         <Line 
                           type="monotone" 
