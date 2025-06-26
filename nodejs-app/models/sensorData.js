@@ -6,10 +6,6 @@ const sensorDataSchema = new mongoose.Schema({
     required: false,
     index: true
   },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  },
   // Sensor data fields
   ADC_CH0V: {
     type: Number,
@@ -77,63 +73,6 @@ const sensorDataSchema = new mongoose.Schema({
   strict: false // Allow dynamic fields in the payload
 });
 
-// Create 2dsphere index for location-based queries
-sensorDataSchema.index({ location: '2dsphere' });
-
-// Create compound index for common query patterns
-sensorDataSchema.index({ deviceId: 1, timestamp: -1 });
-
-// Create model if it doesn't exist to prevent OverwriteModelError
-const SensorData = mongoose.models.SensorData || 
-  mongoose.model('SensorsData', sensorDataSchema);
-
-// Ensure no TTL indexes exist on this collection
-const removeTTLIndexes = async () => {
-  try {
-    const db = mongoose.connection.db;
-    
-    try {
-      const collections = await db.listCollections({ name: 'sensors_data' }).toArray();
-      
-      // Only proceed if the collection exists
-      if (collections.length > 0) {
-        const collection = db.collection('sensors_data');
-        const indexes = await collection.indexes();
-        
-        for (const index of indexes) {
-          // Check if this is a TTL index and it's not the _id_ index
-          if (index.expireAfterSeconds && index.name !== '_id_') {
-            try {
-              await collection.dropIndex(index.name);
-              console.log(`Dropped TTL index: ${index.name} from sensors_data`);
-            } catch (dropError) {
-              // Ignore errors when dropping non-existent indexes
-              if (dropError.code !== 27) { // 27 = IndexNotFound
-                console.error('Error dropping index:', dropError);
-              }
-            }
-          }
-        }
-      } else {
-        console.log('Sensors_data collection does not exist yet, skipping TTL index check');
-      }
-    } catch (listError) {
-      // Ignore NamespaceNotFound errors (code 26)
-      if (listError.code !== 26) {
-        console.error('Error listing collections:', listError);
-      }
-    }
-  } catch (error) {
-    // Catch any other errors
-    console.error('Unexpected error in removeTTLIndexes:', error);
-  }
-};
-
-// Run this when the model is loaded
-if (mongoose.connection.readyState === 1) { // 1 = connected
-  removeTTLIndexes();
-} else {
-  mongoose.connection.once('open', removeTTLIndexes);
-}
+const SensorData = mongoose.model('SensorData', sensorDataSchema);
 
 module.exports = SensorData;
