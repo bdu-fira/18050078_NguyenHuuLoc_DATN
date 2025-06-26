@@ -28,6 +28,7 @@ const webhookDataSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
+  collection: 'webhook_data',
   strict: false // Allow dynamic fields in the payload
 });
 

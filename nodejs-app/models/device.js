@@ -42,6 +42,10 @@ const deviceSchema = new mongoose.Schema({
     of: Number,
     default: {}
   }
+}, {
+  timestamps: true,
+  collection: 'devices',
+  strict: false // Allow dynamic fields in the payload
 });
 
 const Device = mongoose.model('Device', deviceSchema);
