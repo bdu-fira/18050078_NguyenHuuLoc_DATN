@@ -2,36 +2,47 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CountUp from 'react-countup';
 import moment from 'moment';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Typography, 
-  Empty, 
+import {
+  Card,
+  Row,
+  Col,
+  Typography,
+  Empty,
   Button,
   Tabs,
   Select,
   Space,
-  message
+  message,
 } from 'antd';
-import { 
+import {
   ClockCircleOutlined,
-  ReloadOutlined 
+  ReloadOutlined
 } from '@ant-design/icons';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import { deviceApi, sensorDataApi } from '../services/api';
+import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../constants/sensors';
+import { useSelector, useDispatch } from 'react-redux';
+import { selectAllDevices, updateDeviceById } from '../features/device/deviceSlice';
+import SensorList from '../components/Device/SensorList';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
+
+const categoryLabels = SENSOR_CATEGORIES;
+const sensorOptions = SENSOR_OPTIONS.map(sensor => ({
+  ...sensor,
+  icon: React.createElement(sensor.icon, {
+    style: { color: sensor.color }
+  })
+}));
 
 // Time range options in hours
 const TIME_RANGES = [
@@ -44,7 +55,7 @@ const TIME_RANGES = [
 // Format sensor data for charts and calculate averages
 const formatSensorData = (data, device) => {
   if (!data || !Array.isArray(data)) return { data: [], averages: {} };
-  
+
   const formattedData = data.map(item => ({
     ...item,
     timestamp: new Date(item.timestamp).getTime(),
@@ -74,10 +85,14 @@ const formatSensorData = (data, device) => {
 };
 
 const chartStyle = {
-  card: { 
+  card: {
     marginBottom: 24,
     borderRadius: 8,
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)'
+    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+    minHeight: 0,
+    minWidth: 0,
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
   chartContainer: {
     width: '100%',
@@ -100,15 +115,15 @@ const CustomTooltip = ({ active, payload, label }) => {
           {moment(label).format('DD/MM/YYYY HH:mm:ss')}
         </p>
         {payload.map((entry, index) => (
-          <div key={`item-${index}`} style={{ 
-            display: 'flex', 
+          <div key={`item-${index}`} style={{
+            display: 'flex',
             justifyContent: 'space-between',
             margin: '4px 0',
             alignItems: 'center'
           }}>
             <span style={{ color: '#8c8c8c', marginRight: '12px' }}>{entry.name}:</span>
-            <span style={{ 
-              color: entry.color, 
+            <span style={{
+              color: entry.color,
               fontWeight: 500,
               minWidth: '60px',
               textAlign: 'right'
@@ -126,12 +141,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgValue, threshold }) => {
   // Get the data from props or children
   const chartData = data || children?.props?.data || [];
-  
+
   // Format X-axis tick to show date and time using moment.js
   const formatXAxis = (tickItem) => {
     const date = moment(tickItem);
     const now = moment();
-    
+
     if (date.isSame(now, 'day')) {
       return date.format('HH:mm'); // Today - show time only
     } else if (date.isSame(now.clone().subtract(1, 'days'), 'day')) {
@@ -139,25 +154,25 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
     } else if (date.isSame(now, 'year')) {
       return date.format('DD/MM HH:mm'); // This year - show date and time without year
     }
-    
+
     return date.format('DD/MM/YY HH:mm'); // Older dates - show with 2-digit year
   };
 
   return (
-    <Card 
-      title={title} 
+    <Card
+      title={title}
       style={chartStyle.card}
-      styles={{ header: { borderBottom: '1px solid #f0f0f0' } }}
+      styles={{ header: { borderBottom: '1px solid #f0f0f0' }, body: { minHeight: '300px', } }}
     >
       <div style={chartStyle.chartContainer}>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart 
+            <LineChart
               data={dataKey ? chartData : undefined}
               margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
+              <XAxis
                 dataKey="timestamp"
                 tick={{ fontSize: 12 }}
                 tickMargin={10}
@@ -165,15 +180,15 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
                 tickFormatter={formatXAxis}
                 interval="preserveStartEnd"
               />
-              <YAxis 
+              <YAxis
                 domain={domain || ['auto', 'auto']}
                 tick={{ fontSize: 12 }}
                 tickMargin={5}
                 width={40}
                 label={{ value: unit, angle: -90, position: 'insideLeft' }}
               />
-              <Tooltip 
-                content={<CustomTooltip />} 
+              <Tooltip
+                content={<CustomTooltip />}
                 wrapperStyle={{ zIndex: 100 }}
                 labelFormatter={(label) => {
                   return `Thời gian: ${moment(label).format('DD/MM/YYYY HH:mm:ss')}`;
@@ -182,8 +197,8 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
               <Legend />
               {dataKey ? (
                 <>
-                  <Line 
-                    type="monotone" 
+                  <Line
+                    type="monotone"
                     dataKey={dataKey}
                     name={title}
                     stroke={color}
@@ -194,11 +209,11 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
                     isAnimationActive={false}
                   />
                   {threshold !== undefined && (
-                    <Line 
-                      type="monotone" 
-                      dataKey={() => threshold} 
-                      name="Ngưỡng cảnh báo" 
-                      stroke="#faad14" 
+                    <Line
+                      type="monotone"
+                      dataKey={() => threshold}
+                      name="Ngưỡng cảnh báo"
+                      stroke="#faad14"
                       strokeDasharray="5 5"
                       dot={false}
                       strokeWidth={1}
@@ -207,17 +222,17 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
                   )}
                 </>
               ) : (
-                React.Children.map(children, child => 
+                React.Children.map(children, child =>
                   child && React.cloneElement(child, { data: chartData })
                 )
               )}
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             height: '100%',
             color: 'rgba(0, 0, 0, 0.25)'
           }}>
@@ -339,40 +354,35 @@ const calculateAverage = (arr, key) => {
 const DeviceDetail = () => {
   const { deviceId } = useParams();
   const navigate = useNavigate();
+  const devices = useSelector(selectAllDevices);
   const [loading, setLoading] = useState(true);
-  const [device, setDevice] = useState(null);
+  const device = devices.find(device => device.deviceId === deviceId);
   const [sensorData, setSensorData] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(24);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sensorAverages, setSensorAverages] = useState({});
+  const [selectedSensors, setSelectedSensors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const dispatch = useDispatch();
 
-  const fetchDeviceData = useCallback(async () => {
+  const fetchSensorsData = useCallback(async () => {
     if (!deviceId) return;
-    
+
     try {
       setLoading(true);
-      
-      // Fetch device details and sensor data in parallel
-      const [deviceResponse, sensorResponse] = await Promise.all([
-        deviceApi.getDeviceById(deviceId),
-        sensorDataApi.getSensorData(deviceId, timeRange)
-      ]);
-      
-      if (deviceResponse?.success) {
-        setDevice(deviceResponse.data);
-      } else {
-        throw new Error(deviceResponse?.message || 'Failed to fetch device');
-      }
-      
+
+      // Fetch sensor data in parallel
+      const sensorResponse = await sensorDataApi.getSensorData(deviceId, timeRange);
+
       if (sensorResponse?.success) {
-        const { data: formattedData, averages } = formatSensorData(sensorResponse.data, deviceResponse.data);
+        const { data: formattedData, averages } = formatSensorData(sensorResponse.data);
         setSensorData(formattedData);
         setSensorAverages(averages);
       } else {
         throw new Error(sensorResponse?.message || 'Failed to fetch sensor data');
       }
-      
+
     } catch (error) {
       console.error('Error:', error);
       message.error(error.message || 'Có lỗi xảy ra khi tải dữ liệu');
@@ -385,7 +395,7 @@ const DeviceDetail = () => {
   // Handle refresh data
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchDeviceData();
+    fetchSensorsData();
   };
 
   // Handle time range change
@@ -393,11 +403,61 @@ const DeviceDetail = () => {
     setTimeRange(value);
   };
 
+  // Initialize selected sensors from device data
+  useEffect(() => {
+    if (device?.sensors) {
+      setSelectedSensors({...device.sensors});
+    }
+  }, [device]);
+
   // Initial data fetch and refetch when time range changes
   useEffect(() => {
-    fetchDeviceData();
-  }, [fetchDeviceData]);
+    fetchSensorsData();
+  }, [fetchSensorsData]);
 
+  // Handle sensor toggle
+  const handleSensorToggle = (sensorName) => {
+    const newSelectedSensors = {...selectedSensors};
+    if (newSelectedSensors.hasOwnProperty(sensorName)) {
+      delete newSelectedSensors[sensorName];
+    } else {
+      const sensor = sensorOptions.find(s => s.name === sensorName);
+      if (sensor) {
+        newSelectedSensors[sensorName] = sensor.defaultThreshold || 50;
+      }
+    }
+    setSelectedSensors(newSelectedSensors);
+  };
+
+  // Handle threshold change
+  const handleThresholdChange = (sensorName, value) => {
+    setSelectedSensors(prev => ({
+      ...prev,
+      [sensorName]: value
+    }));
+  };
+
+  // Save sensor configuration
+  const handleSaveSensors = async () => {
+    try {
+      setIsSaving(true);
+      const resultAction = await dispatch(updateDeviceById({
+        deviceId,
+        sensors: selectedSensors
+      }));
+
+      if (updateDeviceById.fulfilled.match(resultAction)) {
+        message.success('Đã cập nhật cấu hình cảm biến thành công');
+      } else {
+        throw new Error(resultAction.payload || 'Failed to update device');
+      }
+    } catch (error) {
+      console.error('Error saving sensor configuration:', error);
+      message.error(error.message || 'Có lỗi xảy ra khi lưu cấu hình');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (!device) {
     return (
@@ -428,13 +488,13 @@ const DeviceDetail = () => {
             <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>ID: {device.deviceId}</div>
             {device.location && (
               <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
-                Vị trí: {typeof device.location === 'object' 
+                Vị trí: {typeof device.location === 'object'
                   ? `Lat: ${device.location.lat?.toFixed(6)}, Lng: ${device.location.lng?.toFixed(6)}`
                   : device.location}
               </div>
             )}
           </div>
-          
+
           <Space size="middle">
             <Space>
               <ClockCircleOutlined />
@@ -446,15 +506,15 @@ const DeviceDetail = () => {
                 disabled={loading}
               >
                 {TIME_RANGES.map(range => (
-                  <Option key={range.value} value={range.value}>
+                  <Select.Option key={range.value} value={range.value}>
                     {range.label}
-                  </Option>
+                  </Select.Option>
                 ))}
               </Select>
             </Space>
-            
-            <Button 
-              icon={<ReloadOutlined spin={isRefreshing} />} 
+
+            <Button
+              icon={<ReloadOutlined spin={isRefreshing} />}
               onClick={handleRefresh}
               loading={isRefreshing}
               disabled={isRefreshing}
@@ -465,8 +525,8 @@ const DeviceDetail = () => {
         </div>
       </div>
 
-      <Tabs 
-        activeKey={activeTab} 
+      <Tabs
+        activeKey={activeTab}
         onChange={setActiveTab}
         items={[
           {
@@ -480,18 +540,18 @@ const DeviceDetail = () => {
 
                   return (
                     <Col key={sensorKey} xs={24} md={12} lg={8}>
-                      <ChartCard 
+                      <ChartCard
                         title={config.title}
                         dataKey={config.dataKey}
                         color={config.color}
                         unit={config.unit}
-                        domain={[0, threshold * 1.5]} 
+                        domain={[0, threshold * 1.5]}
                         data={sensorData}
                         avgValue={sensorAverages[sensorKey]}
                         threshold={threshold}
                       >
-                        <Line 
-                          type="monotone" 
+                        <Line
+                          type="monotone"
                           dataKey={config.dataKey}
                           name={config.title}
                           stroke={config.color}
@@ -501,11 +561,11 @@ const DeviceDetail = () => {
                           unit={config.unit}
                         />
                         {/* Threshold line */}
-                        <Line 
-                          type="monotone" 
-                          dataKey={() => threshold} 
-                          name="Ngưỡng cảnh báo" 
-                          stroke="#faad14" 
+                        <Line
+                          type="monotone"
+                          dataKey={() => threshold}
+                          name="Ngưỡng cảnh báo"
+                          stroke="#faad14"
                           strokeDasharray="5 5"
                           dot={false}
                           strokeWidth={1}
@@ -526,7 +586,7 @@ const DeviceDetail = () => {
             key: 'data',
             label: 'Dữ liệu thô',
             children: (
-              <Card style={{ marginTop: 16, overflow: 'auto', maxHeight: '400px', maxWidth: '100%' }}>
+              <Card style={{ marginTop: 16, overflow: 'auto', minHeight: 0, maxHeight: '400px', minWidth: 0, maxWidth: '100%' }}>
                 <pre>{JSON.stringify(sensorData, null, 2)}</pre>
               </Card>
             )
@@ -535,14 +595,33 @@ const DeviceDetail = () => {
             key: 'settings',
             label: 'Cài đặt',
             children: (
-              <Card style={{ marginTop: 16 }}>
-                <h3>Cài đặt thiết bị</h3>
-                <p>ID thiết bị: {device.deviceId}</p>
-                <p>Trạng thái: {device.status || 'Đang hoạt động'}</p>
-                <p>Cập nhật lần cuối: {new Date().toLocaleString()}</p>
-                <Button type="primary" danger style={{ marginTop: 16 }}>
-                  Xóa thiết bị
-                </Button>
+              <Card style={{ marginTop: 16, minHeight: 0, maxHeight: '100%', minWidth: 0, maxWidth: '100%' }}>
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>Cấu hình cảm biến</Title>
+                  <Text type="secondary">Chọn và cấu hình ngưỡng cảnh báo cho các cảm biến</Text>
+                </div>
+                
+                <SensorList 
+                  sensorOptions={sensorOptions}
+                  categoryLabels={categoryLabels}
+                  selectedSensors={selectedSensors}
+                  onSensorToggle={handleSensorToggle}
+                  onThresholdChange={handleThresholdChange}
+                />
+                
+                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                  <Button onClick={() => setSelectedSensors({...device.sensors})}>
+                    Hủy bỏ
+                  </Button>
+                  <Button 
+                    type="primary" 
+                    onClick={handleSaveSensors}
+                    loading={isSaving}
+                    disabled={JSON.stringify(selectedSensors) === JSON.stringify(device.sensors || {})}
+                  >
+                    Lưu thay đổi
+                  </Button>
+                </div>
               </Card>
             )
           }

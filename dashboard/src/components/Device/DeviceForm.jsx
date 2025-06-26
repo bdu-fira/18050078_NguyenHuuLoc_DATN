@@ -3,6 +3,7 @@ import { Form, Input, InputNumber, Modal, message, Checkbox, Row, Col, Divider, 
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../../constants/sensors';
 import { useDispatch } from 'react-redux';
 import { addNewDevice, updateDeviceById } from '../../features/device/deviceSlice';
+import SensorList from './SensorList';
 
 const { Text } = Typography;
 
@@ -115,105 +116,13 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
             name="sensors"
             rules={[{ required: true, message: 'Vui lòng chọn ít nhất một cảm biến' }]}
           >
-            <div style={{ width: '100%' }}>
-              {Object.entries(
-                sensorOptions.reduce((acc, sensor) => {
-                  if (!acc[sensor.category]) {
-                    acc[sensor.category] = [];
-                  }
-                  acc[sensor.category].push(sensor);
-                  return acc;
-                }, {})
-              ).map(([category, sensors]) => (
-                <div key={category} style={{ marginBottom: 24 }}>
-                  <Text strong style={{ display: 'block', marginBottom: 12, fontSize: '16px' }}>
-                    {categoryLabels[category] || category}
-                  </Text>
-                  <Row gutter={[16, 16]}>
-                    {sensors.map(sensor => (
-                      <Col xs={24} sm={12} md={8} lg={6} key={sensor.name}>
-                        <div
-                          style={{
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}
-                        >
-                          <Card
-                            hoverable
-                            size="small"
-                            style={{
-                              border: '1px solid #f0f0f0',
-                              borderRadius: 8,
-                              transition: 'all 0.3s',
-                              backgroundColor: selectedSensors.hasOwnProperty(sensor.name) ? '#f6ffed' : '#fafafa',
-                              borderColor: selectedSensors.hasOwnProperty(sensor.name) ? '#b7eb8f' : '#f0f0f0',
-                              height: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              opacity: selectedSensors.hasOwnProperty(sensor.name) ? 1 : 0.8
-                            }}
-                            styles={{
-                              body: {
-                                padding: '12px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                flex: 1,
-                                gap: '12px'
-                              }
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                cursor: 'pointer'
-                              }}
-                              onClick={() => handleSensorToggle(sensor.name)}
-                            >
-                              <Checkbox
-                                checked={selectedSensors.hasOwnProperty(sensor.name)}
-                                style={{ marginTop: '2px', marginRight: '12px' }}
-                                onClick={e => e.stopPropagation()}
-                                onChange={e => handleSensorToggle(sensor.name)}
-                              />
-                              <Space size="middle" style={{ display: 'flex', alignItems: 'center' }}>
-                                <div style={{ fontSize: '20px' }}>
-                                  {sensor.icon}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: 500 }}>{sensor.label}</div>
-                                  {sensor.unit && (
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                      {sensor.unit}
-                                    </Text>
-                                  )}
-                                </div>
-                              </Space>
-                            </div>
-
-                            <div style={{ width: '100%' }}>
-                              <div style={{ fontSize: '12px', marginBottom: '4px', color: '#666' }}>Ngưỡng cảnh báo</div>
-                              <InputNumber
-                                size="small"
-                                disabled={!selectedSensors.hasOwnProperty(sensor.name)}
-                                style={{ width: '100%' }}
-                                min={0}
-                                max={sensor.name === 'temperature' ? 100 : 1000} // Adjust max based on sensor type
-                                formatter={value => `${value}${sensor.unit ? ` ${sensor.unit}` : ''}`}
-                                parser={value => value.replace(new RegExp(`\\s*${sensor.unit || ''}$`), '')}
-                                value={selectedSensors[sensor.name] || 50}
-                                onChange={(value) => handleThresholdChange(sensor.name, value)}
-                              />
-                            </div>
-                          </Card>
-                        </div>
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
-              ))}
-            </div>
+            <SensorList 
+              sensorOptions={sensorOptions}
+              categoryLabels={categoryLabels}
+              selectedSensors={selectedSensors}
+              onSensorToggle={handleSensorToggle}
+              onThresholdChange={handleThresholdChange}
+            />
           </Form.Item>
         ),
     },
