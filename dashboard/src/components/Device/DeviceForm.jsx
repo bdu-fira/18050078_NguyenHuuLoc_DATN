@@ -60,74 +60,6 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     }
   }, [open, initialValues, form]);
 
-  const items = [
-    {
-      key: '1',
-      label: 'Vị trí đặt thiết bị',
-      children:
-        (
-          <div>
-            <Row gutter={20}>
-              <Col span={12}>
-                <Form.Item
-                  name={['location', 'lat']}
-                  label={<span style={{ fontWeight: 500, color: '#434343' }}>Vĩ độ</span>}
-                  rules={[]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    size="large"
-                    placeholder="VD: 10.762622"
-                    step="0.000001"
-                    min="-90"
-                    max="90"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name={['location', 'lng']}
-                  label={<span style={{ fontWeight: 500, color: '#434343' }}>Kinh độ</span>}
-                  rules={[]}
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    size="large"
-                    placeholder="VD: 106.660172"
-                    step="0.000001"
-                    min="-180"
-                    max="180"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            <div style={{ color: '#8c8c8c', fontSize: '12px', marginTop: '-12px', marginBottom: '8px' }}>
-              Tọa độ GPS của vị trí đặt thiết bị
-            </div>
-          </div>
-        ),
-    },
-    {
-      key: '2',
-      label: 'Cấu Hình Cảm Biến',
-      children:
-        (
-          <Form.Item
-            name="sensors"
-            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một cảm biến' }]}
-          >
-            <SensorList 
-              sensorOptions={sensorOptions}
-              categoryLabels={categoryLabels}
-              selectedSensors={selectedSensors}
-              onSensorToggle={handleSensorToggle}
-              onThresholdChange={handleThresholdChange}
-            />
-          </Form.Item>
-        ),
-    },
-  ];
-
   const handleSensorToggle = (sensorName) => {
     const isCurrentlySelected = selectedSensors.hasOwnProperty(sensorName);
     const newSelected = { ...selectedSensors };
@@ -203,6 +135,73 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     }
   };
 
+  const items = [
+    {
+      key: '1',
+      label: 'Cấu Hình Cảm Biến',
+      children:
+        (
+          <Form.Item
+            name="sensors"
+            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một cảm biến' }]}
+          >
+            <SensorList
+              sensorOptions={sensorOptions}
+              categoryLabels={categoryLabels}
+              selectedSensors={selectedSensors}
+              onSensorToggle={handleSensorToggle}
+              onThresholdChange={handleThresholdChange}
+            />
+          </Form.Item>
+        ),
+    },
+    {
+      key: '2',
+      label: 'Vị trí đặt thiết bị',
+      children:
+        (
+          <div>
+            <Row gutter={20}>
+              <Col span={12}>
+                <Form.Item
+                  name={['location', 'lat']}
+                  label={<span style={{ fontWeight: 500, color: '#434343' }}>Vĩ độ</span>}
+                  rules={[]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    size="large"
+                    placeholder="VD: 10.762622"
+                    step="0.000001"
+                    min="-90"
+                    max="90"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name={['location', 'lng']}
+                  label={<span style={{ fontWeight: 500, color: '#434343' }}>Kinh độ</span>}
+                  rules={[]}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    size="large"
+                    placeholder="VD: 106.660172"
+                    step="0.000001"
+                    min="-180"
+                    max="180"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <div style={{ color: '#8c8c8c', fontSize: '12px', marginTop: '-12px', marginBottom: '8px' }}>
+              Tọa độ GPS của vị trí đặt thiết bị
+            </div>
+          </div>
+        ),
+    },
+  ];
 
   return (
     <Modal

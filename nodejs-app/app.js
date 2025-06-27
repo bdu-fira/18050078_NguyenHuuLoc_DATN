@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { start, stop } = require('./cron/cronService');
 const webhookController = require('./controllers/webhookController');
 
 // Import routes
@@ -37,9 +36,6 @@ mongoose.connect(MONGODB_URI, {
 })
   .then(() => {
     console.log('Connected to MongoDB');
-
-    // Start cron jobs after database is initialized
-    // start();
   })
   .catch(err => {
     console.error('MongoDB connection error:', err);
@@ -61,21 +57,6 @@ mongoose.connection.on('disconnected', () => {
 // API routes
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
-
-// API endpoints for cron job management
-app.get('/api/cron/stop', (req, res) => {
-  stop();
-  res.json({ message: 'Cron jobs stopped' });
-});
-
-app.get('/api/cron/start', (req, res) => {
-  start();
-  res.json({ message: 'Cron jobs started' });
-});
-
-app.get('/api/cron/status', (req, res) => {
-  res.json({ status: 'running' });
-});
 
 // Webhook endpoints
 app.post('/api/webhooks',
