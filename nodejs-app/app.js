@@ -44,8 +44,7 @@ const mongooseOptions = {
   maxPoolSize: 10,
   minPoolSize: 1,
   directConnection: false,
-  ssl: false, // Set to true only if you're using TLS
-  tlsAllowInvalidCertificates: false // Only for development with self-signed certs
+  ssl: false,
 };
 
 // Connect to MongoDB
@@ -54,6 +53,7 @@ mongoose
   .then(() => console.log('✅ Successfully connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB initial connection error:', err.message);
+    console.error('❌ err:', err);
     console.error('❌ MONGODB_URI:', MONGODB_URI);
     process.exit(1);
   });
