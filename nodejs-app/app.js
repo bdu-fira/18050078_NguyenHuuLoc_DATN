@@ -12,59 +12,88 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://34.87.37.168:3001', 'http://localhost:3001'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://34.87.37.168:3001',
+    'http://localhost:3001'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200
 };
 
-// Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongodb:27017/nodejs-app';
+// MongoDB connection setup
+const MONGODB_USER = process.env.MONGODB_USER || 'test';
+const MONGODB_PASSWORD = process.env.MONGODB_PASSWORD || 'test';
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'nodejs-app';
 
-mongoose.connect(MONGODB_URI, {
+const MONGODB_URI = `mongodb://${MONGODB_USER}:${encodeURIComponent(
+  MONGODB_PASSWORD
+)}@mongodb:27017/${MONGODB_DATABASE}?authSource=admin`;
+
+// Connection options
+const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
-  keepAlive: true,
-  keepAliveInitialDelay: 300000
-})
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
+  connectTimeoutMS: 30000,
+  maxPoolSize: 10,
+  minPoolSize: 1,
+  directConnection: false,
+  ssl: false, // Set to true only if you're using TLS
+  tlsAllowInvalidCertificates: false // Only for development with self-signed certs
+};
+
+// Connect to MongoDB
+mongoose
+  .connect(MONGODB_URI, mongooseOptions)
+  .then(() => console.log('✅ Successfully connected to MongoDB'))
+  .catch((err) => {
+    console.error('❌ MongoDB initial connection error:', err.message);
     process.exit(1);
   });
 
-// Handle connection errors
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
+// MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connected to MongoDB');
 });
 
-// Handle disconnection
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose connection error:', err.message);
+});
+
 mongoose.connection.on('disconnected', () => {
   console.error('MongoDB disconnected');
-  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('Mongoose connection closed on app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error closing MongoDB connection:', err);
+    process.exit(1);
+  }
 });
 
 // API routes
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
 
-// Webhook endpoints
-app.post('/api/webhooks',
-  express.json({ limit: '10mb' }), // Increase payload size limit for webhooks
+// Webhooks
+app.post(
+  '/api/webhooks',
+  express.json({ limit: '10mb' }),
   webhookController.handleWebhook
 );
-
-// Admin endpoints (optional, consider adding authentication)
 app.get('/api/webhooks', webhookController.getWebhookData);
 app.get('/api/webhooks/:id', webhookController.getWebhookById);
 
@@ -73,7 +102,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Node.js server with MongoDB is running!' });
 });
 
-// Error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
@@ -81,5 +110,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });

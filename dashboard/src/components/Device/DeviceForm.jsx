@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal, message, Checkbox, Row, Col, Divider, Card, Typography, Space, Collapse } from 'antd';
+import { Form, Input, InputNumber, Modal, message, Row, Col, Collapse } from 'antd';
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../../constants/sensors';
 import { useDispatch } from 'react-redux';
 import { addNewDevice, updateDeviceById } from '../../features/device/deviceSlice';
 import SensorList from './SensorList';
-
-const { Text } = Typography;
 
 const categoryLabels = SENSOR_CATEGORIES;
 
@@ -91,6 +89,14 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     }));
   };
 
+  // Custom validator for sensors
+  const validateSensors = (_, value) => {
+    if (Object.keys(selectedSensors).length === 0) {
+      return Promise.reject(new Error('Vui lòng chọn ít nhất một cảm biến'));
+    }
+    return Promise.resolve();
+  };
+
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
@@ -143,15 +149,22 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
         (
           <Form.Item
             name="sensors"
-            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một cảm biến' }]}
+            rules={[
+              { validator: validateSensors }
+            ]}
+            validateTrigger={['onChange', 'onBlur']}
           >
-            <SensorList
-              sensorOptions={sensorOptions}
-              categoryLabels={categoryLabels}
-              selectedSensors={selectedSensors}
-              onSensorToggle={handleSensorToggle}
-              onThresholdChange={handleThresholdChange}
-            />
+            <div>
+              <SensorList
+                sensorOptions={sensorOptions}
+                categoryLabels={categoryLabels}
+                selectedSensors={selectedSensors}
+                onSensorToggle={handleSensorToggle}
+                onThresholdChange={handleThresholdChange}
+              />
+              {/* Hidden input to force form validation */}
+              <input type="hidden" value={JSON.stringify(selectedSensors)} />
+            </div>
           </Form.Item>
         ),
     },

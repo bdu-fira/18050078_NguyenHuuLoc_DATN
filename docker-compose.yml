@@ -19,9 +19,6 @@ services:
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - MONGODB_URI=mongodb://mongodb:27017/nodejs-app
     depends_on:
       mongodb:
         condition: service_healthy
@@ -37,14 +34,18 @@ services:
     volumes:
       - ./mongodb/mongo_data:/data/db
       - ./mongodb/mongo_config:/data/configdb
-    networks:
-      - projects_default
-    command: ["mongod", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+    command: ["mongod", "--bind_ip_all", "--auth"]
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--norc", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - projects_default
+
 
   ngrok:
     image: ngrok/ngrok:latest

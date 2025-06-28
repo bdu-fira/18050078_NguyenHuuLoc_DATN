@@ -27,8 +27,7 @@ COPY --from=builder /usr/src/app/package*.json ./
 COPY . .
 
 # Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
+COPY .env .
 
 # Set file permissions
 RUN chown -R appuser:appgroup /usr/src/app
