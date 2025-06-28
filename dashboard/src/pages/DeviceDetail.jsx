@@ -441,10 +441,13 @@ const DeviceDetail = () => {
   const handleSaveSensors = async () => {
     try {
       setIsSaving(true);
-      const resultAction = await dispatch(updateDeviceById({
-        deviceId,
+      // Create a new device object with the updated sensors
+      const updatedDevice = {
+        ...device,
         sensors: selectedSensors
-      }));
+      };
+      
+      const resultAction = await dispatch(updateDeviceById(updatedDevice));
 
       if (updateDeviceById.fulfilled.match(resultAction)) {
         message.success('Đã cập nhật cấu hình cảm biến thành công');
