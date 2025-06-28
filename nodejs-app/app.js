@@ -54,6 +54,7 @@ mongoose
   .then(() => console.log('✅ Successfully connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB initial connection error:', err.message);
+    console.error('❌ MONGODB_URI:', MONGODB_URI);
     process.exit(1);
   });
 
