@@ -32,9 +32,7 @@ const MONGODB_USER = process.env.MONGODB_USER || 'test';
 const MONGODB_PASSWORD = process.env.MONGODB_PASSWORD || 'test';
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'nodejs-app';
 
-const MONGODB_URI = `mongodb://${MONGODB_USER}:${encodeURIComponent(
-  MONGODB_PASSWORD
-)}@mongodb:27017/${MONGODB_DATABASE}?authSource=admin`;
+const MONGODB_URI = `mongodb://${MONGODB_USER}:${MONGODB_PASSWORD}@mongodb:27017/${MONGODB_DATABASE}?authSource=admin`;
 
 // Connection options
 const mongooseOptions = {
