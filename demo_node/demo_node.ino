@@ -16,6 +16,7 @@
 #include "Wire.h"
 #include "GXHTC.h"
 #include <DHT.h>
+#include <ArduinoJson.h>
 
 GXHTC gxhtc;
 
@@ -101,10 +102,6 @@ static void prepareTxFrame(uint8_t port) {
   *the max value for different DR can be found in MaxPayloadOfDatarateCN470 refer to DataratesCN470 and BandwidthsCN470 in "RegionCN470.h".
   */
   readDHTSensor();
-  Serial.print("Temperature:");
-  Serial.print(temperature);
-  Serial.print("  Humidity:");
-  Serial.println(humidity);
   delay(100);
   unsigned char *puc;
   appDataSize = 0;
@@ -130,6 +127,86 @@ static void prepareTxFrame(uint8_t port) {
 //if true, next uplink will add MOTE_MAC_DEVICE_TIME_REQ
 
 
+//downlink data handle function example
+void downLinkDataHandle(McpsIndication_t *mcpsIndication) {
+  Serial.printf("+REV DATA:%s,RXSIZE %d,PORT %d\r\n",
+                mcpsIndication->RxSlot ? "RXWIN2" : "RXWIN1",
+                mcpsIndication->BufferSize,
+                mcpsIndication->Port);
+
+  if (mcpsIndication->BufferSize == 0) {
+    Serial.println("No payload received.");
+    return;
+  }
+
+  // In dạng HEX
+  Serial.print("+RAW HEX: ");
+  for (uint8_t i = 0; i < mcpsIndication->BufferSize; i++) {
+    Serial.printf("%02X", mcpsIndication->Buffer[i]);
+  }
+  Serial.println();
+
+  // Chuyển buffer thành chuỗi JSON
+  char jsonStr[128] = { 0 };
+  memcpy(jsonStr, mcpsIndication->Buffer, mcpsIndication->BufferSize);
+  jsonStr[mcpsIndication->BufferSize] = '\0';
+
+  Serial.print("Received JSON: ");
+  Serial.println(jsonStr);
+
+  // Parse JSON
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, jsonStr);
+
+  if (error) {
+    Serial.print("JSON parse failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Đọc trường lệnh
+  const char *cmd = doc["cmd"];
+
+  if (cmd) {
+    Serial.print("Command received: ");
+    Serial.println(cmd);
+
+    if (strcmp(cmd, "config") == 0) {
+      // Nếu có "interval", cập nhật thời gian gửi uplink
+      if (doc.containsKey("interval")) {
+        appTxDutyCycle = doc["interval"];
+        Serial.print("Updated interval: ");
+        Serial.println(appTxDutyCycle);
+      }
+
+      // Nếu có RGB, đổi màu đèn
+      if (doc.containsKey("rgb")) {
+        int r = doc["rgb"]["r"] | 0;
+        int g = doc["rgb"]["g"] | 0;
+        int b = doc["rgb"]["b"] | 0;
+
+        Serial.printf("RGB set to R:%d G:%d B:%d\n", r, g, b);
+#if (LoraWan_RGB == 1)
+        uint32_t color = (r << 16) | (g << 8) | b;
+        turnOnRGB(color, 5000);
+        turnOffRGB();
+#endif
+      }
+    }
+
+    if (strcmp(cmd, "off") == 0) {
+#if (LoraWan_RGB == 1)
+      turnOffRGB();
+#endif
+    }
+
+    // Bạn có thể mở rộng thêm nhiều cmd khác ở đây
+  }
+}
+
+
+
+
 void setup() {
   Serial.begin(115200);
   Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);
@@ -142,9 +219,9 @@ void loop() {
   switch (deviceState) {
     case DEVICE_STATE_INIT:
       {
-        #if (LORAWAN_DEVEUI_AUTO)
-          LoRaWAN.generateDeveuiByChipID();
-        #endif
+#if (LORAWAN_DEVEUI_AUTO)
+        LoRaWAN.generateDeveuiByChipID();
+#endif
         LoRaWAN.init(loraWanClass, loraWanRegion);
         //both set join DR and DR when ADR off
         LoRaWAN.setDefaultDR(3);
