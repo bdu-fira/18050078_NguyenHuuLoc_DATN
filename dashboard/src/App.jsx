@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
 import DeviceListReduxExample from './features/device/DeviceListReduxExample';
 import DeviceDetail from './pages/DeviceDetail';
+import Chatbot from './components/Chatbot/Chatbot';
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -84,10 +85,15 @@ const router = createBrowserRouter([
 ]);
 
 // Finally, define and export the App component
-const App = () => <RouterProvider
-  future={{
-    v7_startTransition: true,
-  }}
-  router={router}
-/>;
+const App = () => (
+  <>
+    <RouterProvider
+      future={{
+        v7_startTransition: true,
+      }}
+      router={router}
+    />
+    <Chatbot />
+  </>
+);
 export default App;
