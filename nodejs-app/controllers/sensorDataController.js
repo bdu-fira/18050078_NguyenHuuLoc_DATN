@@ -31,8 +31,6 @@ const getSensorDataByTimeRange = async (req, res) => {
     startDate.setHours(startDate.getHours() - hoursNum);
     
     // Query the database
-    console.log(deviceId);
-    console.log(startDate);
     const data = await SensorData.find({
       deviceId: deviceId,
       createdAt: { $gte: startDate }
