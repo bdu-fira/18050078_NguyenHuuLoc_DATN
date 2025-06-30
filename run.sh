@@ -8,9 +8,5 @@ docker compose down
 echo "Building and starting containers..."
 docker compose up --build -d
 
-# Wait for MongoDB to be ready
-echo "Waiting for MongoDB to be ready..."
-sleep 5
-
 # Show status
 echo "All services are running!"

@@ -45,7 +45,7 @@ const deviceSchema = new mongoose.Schema({
     default: {}
   }
 }, {
-  timestamps: false,
+  timestamps: true,
   collection: 'devices',
   strict: false // Allow dynamic fields in the payload
 });

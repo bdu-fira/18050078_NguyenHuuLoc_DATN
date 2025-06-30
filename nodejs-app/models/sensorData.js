@@ -68,7 +68,7 @@ const sensorDataSchema = new mongoose.Schema({
     default: {}
   }
 }, {
-  timestamps: false,
+  timestamps: true,
   collection: 'sensors_data',
   strict: false // Allow dynamic fields in the payload
 });
