@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Modal, message, Row, Col, Collapse } from 'antd';
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../../constants/sensors';
 import { useDispatch } from 'react-redux';
 import { addNewDevice, updateDeviceById } from '../../features/device/deviceSlice';
 import SensorList from './SensorList';
+import DeviceFunctions from './DeviceFunctions';
 
 const categoryLabels = SENSOR_CATEGORIES;
 
@@ -20,6 +21,8 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
   const dispatch = useDispatch();
   const [loading, setLoading] = React.useState(false);
   const [selectedSensors, setSelectedSensors] = React.useState({});
+
+  const [deviceFunctions, setDeviceFunctions] = useState([]);
 
   // Set form initial values
   useEffect(() => {
@@ -41,6 +44,13 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
 
       // Initialize selectedSensors with sensors that have values
       setSelectedSensors(sensorValues);
+      
+      // Initialize device functions
+      if (initialValues?.functions) {
+        setDeviceFunctions(Array.isArray(initialValues.functions) ? initialValues.functions : []);
+      } else {
+        setDeviceFunctions([]);
+      }
 
       const timer = setTimeout(() => {
         if (form && typeof form.setFieldsValue === 'function') {
@@ -55,6 +65,7 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
         form.resetFields();
       }
       setSelectedSensors({});
+      setDeviceFunctions([]);
     }
   }, [open, initialValues, form]);
 
@@ -112,7 +123,8 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
           lat: parseFloat(values.location?.lat) || 0,
           lng: parseFloat(values.location?.lng) || 0
         },
-        sensors
+        sensors,
+        functions: deviceFunctions
       };
 
       console.log('Submitting device data:', deviceData);
@@ -170,6 +182,16 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     },
     {
       key: '2',
+      label: 'Chức năng',
+      children: (
+        <DeviceFunctions 
+          functions={deviceFunctions}
+          onChange={setDeviceFunctions}
+        />
+      ),
+    },
+    {
+      key: '3',
       label: 'Vị trí đặt thiết bị',
       children:
         (

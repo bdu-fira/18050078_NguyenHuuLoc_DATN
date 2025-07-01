@@ -3,7 +3,7 @@ const Device = require('../models/device');
 // Create a new device
 exports.createDevice = async (req, res) => {
   try {
-    const { deviceId, name, description, location, sensors = {} } = req.body;
+    const { deviceId, name, description, location, sensors = {}, functions = [] } = req.body;
     
     // Check if device with the same deviceId already exists
     const existingDevice = await Device.findOne({ deviceId });
@@ -22,6 +22,15 @@ exports.createDevice = async (req, res) => {
       name,
       description: description || '',
       sensors: sensorsMap,
+      functions: Array.isArray(functions) ? functions.map(func => ({
+        name: func.name,
+        type: func.type || 'switch',
+        pin: func.pin,
+        status: func.status || false,
+        value: func.value || 0,
+        label: func.label || '',
+        icon: func.icon || ''
+      })) : [],
       location: {
         lat: parseFloat(location.lat),
         lng: parseFloat(location.lng)
@@ -107,8 +116,8 @@ exports.getDevice = async (req, res) => {
 exports.updateDevice = async (req, res) => {
   try {
     const { deviceId } = req.query;
-    const { name, description, location, sensors = {} } = req.body;
-    
+    const { name, description, location, sensors, functions } = req.body;
+
     if (!deviceId) {
       return res.status(400).json({
         success: false,
@@ -116,31 +125,40 @@ exports.updateDevice = async (req, res) => {
       });
     }
     
-    // Create sensors map from the sensors object
-    const sensorsMap = new Map(Object.entries(sensors));
-    
-    const updateData = {
-      name,
-      description,
-      location: {
-        lat: parseFloat(location.lat),
-        lng: parseFloat(location.lng)
-      },
-      sensors: sensorsMap
-    };
-    
-    const updatedDevice = await Device.findOneAndUpdate(
-      { deviceId },
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
-    
-    if (!updatedDevice) {
+    const device = await Device.findOne({ deviceId });
+    if (!device) {
       return res.status(404).json({
         success: false,
         message: 'Device not found'
       });
     }
+    
+    // Update device fields
+    if (name) device.name = name;
+    if (description) device.description = description;
+    if (location) {
+      device.location = {
+        lat: parseFloat(location.lat) || device.location.lat,
+        lng: parseFloat(location.lng) || device.location.lng
+      };
+    }
+    if (sensors) {
+      const sensorsMap = new Map(Object.entries(sensors));
+      device.sensors = sensorsMap;
+    }
+    if (Array.isArray(functions)) {
+      device.functions = functions.map(func => ({
+        name: func.name || 'led',
+        type: func.type || 'switch',
+        pin: func.pin,
+        status: func.status || false,
+        value: func.value || 0,
+        label: func.label || '',
+        icon: func.icon || ''
+      }));
+    }
+    
+    const updatedDevice = await device.save();
     
     res.status(200).json({
       success: true,
