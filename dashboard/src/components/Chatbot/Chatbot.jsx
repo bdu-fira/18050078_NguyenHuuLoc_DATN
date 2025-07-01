@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FloatButton, List, Input, Button } from 'antd';
-import { MessageOutlined, SendOutlined, UserOutlined, RobotOutlined, CloseOutlined } from '@ant-design/icons';
+import { FloatButton, List, Input, Button, Dropdown } from 'antd';
+import { MessageOutlined, SendOutlined, UserOutlined, RobotOutlined, CloseOutlined, ClockCircleOutlined, OrderedListOutlined } from '@ant-design/icons';
 import './Chatbot.css';
 
 const Chatbot = () => {
@@ -26,6 +26,43 @@ const Chatbot = () => {
     }
   ]);
   const [newMessage, setNewMessage] = useState('');
+  
+  const suggestedQuestions = [
+    {
+      key: '1',
+      label: 'Chất lượng môi trường 24h qua',
+      question: 'Cho tôi biết chất lượng môi trường trong 24 giờ qua'
+    },
+    {
+      key: '2',
+      label: 'Dự báo chất lượng môi trường 24h tới',
+      question: 'Dự báo chất lượng môi trường trong 24 giờ tới như thế nào?'
+    },
+    {
+      key: '3',
+      label: 'Chỉ số AQI hiện tại',
+      question: 'Chỉ số AQI hiện tại là bao nhiêu?'
+    },
+    {
+      key: '4',
+      label: 'Thông số môi trường 8h qua',
+      question: 'Hiển thị thông số môi trường trong 8 giờ qua'
+    },
+    {
+      key: '5',
+      label: 'Dự báo thời tiết 12h tới',
+      question: 'Dự báo thời tiết trong 12 giờ tới như thế nào?'
+    },
+    {
+      key: '6',
+      label: 'Cảnh báo môi trường',
+      question: 'Có cảnh báo môi trường nào đang hoạt động không?'
+    },
+  ];
+  
+  const handleQuestionSelect = (question) => {
+    setNewMessage(question);
+  };
 
   const handleSendMessage = () => {
     if (newMessage.trim() === '') return;
@@ -99,22 +136,48 @@ const Chatbot = () => {
             />
           </div>
           <div className="chat-input-container">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onPressEnter={handleSendMessage}
-              placeholder="Nhập tin nhắn..."
-              className="chat-input"
-              suffix={
-                <Button 
-                  type="text" 
-                  icon={<SendOutlined />} 
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  className="send-button"
-                />
-              }
-            />
+            <div className="input-wrapper">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onPressEnter={handleSendMessage}
+                placeholder="Nhập tin nhắn..."
+                className="chat-input"
+                prefix={
+                  <Dropdown
+                    menu={{
+                      items: suggestedQuestions.map(item => ({
+                        key: item.key,
+                        label: (
+                          <div onClick={() => handleQuestionSelect(item.question)}>
+                            <ClockCircleOutlined style={{ marginRight: 8 }} />
+                            {item.label}
+                          </div>
+                        ),
+                      })),
+                    }}
+                    placement="topLeft"
+                    trigger={['click']}
+                    overlayClassName="suggested-questions-dropdown"
+                  >
+                    <Button 
+                      type="text" 
+                      icon={<OrderedListOutlined />} 
+                      className="suggestions-button"
+                    />
+                  </Dropdown>
+                }
+                suffix={
+                  <Button 
+                    type="text" 
+                    icon={<SendOutlined />} 
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim()}
+                    className="send-button"
+                  />
+                }
+              />
+            </div>
           </div>
         </div>
       )}

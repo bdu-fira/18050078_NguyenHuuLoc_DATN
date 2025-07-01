@@ -92,6 +92,9 @@ void readDHTSensor() {
   }
 }
 
+// LED
+#define LED_ALARM_PIN 2
+
 /* Prepares the payload of the frame */
 static void prepareTxFrame(uint8_t port) {
   /*appData size is LORAWAN_APP_DATA_MAX_SIZE which is defined in "commissioning.h".
@@ -127,7 +130,10 @@ static void prepareTxFrame(uint8_t port) {
 //if true, next uplink will add MOTE_MAC_DEVICE_TIME_REQ
 
 
-//downlink data handle function example
+//downlink data handle function
+// {
+//   "cmd": "led_on"
+// }
 void downLinkDataHandle(McpsIndication_t *mcpsIndication) {
   Serial.printf("+REV DATA:%s,RXSIZE %d,PORT %d\r\n",
                 mcpsIndication->RxSlot ? "RXWIN2" : "RXWIN1",
@@ -164,48 +170,16 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication) {
     return;
   }
 
-  // Đọc trường lệnh
-  const char *cmd = doc["cmd"];
-
+  // ✅ Truy cập trường "cmd" trong "data"
+  const char *cmd = doc["data"]["cmd"];  
   if (cmd) {
     Serial.print("Command received: ");
     Serial.println(cmd);
-
-    if (strcmp(cmd, "config") == 0) {
-      // Nếu có "interval", cập nhật thời gian gửi uplink
-      if (doc.containsKey("interval")) {
-        appTxDutyCycle = doc["interval"];
-        Serial.print("Updated interval: ");
-        Serial.println(appTxDutyCycle);
-      }
-
-      // Nếu có RGB, đổi màu đèn
-      if (doc.containsKey("rgb")) {
-        int r = doc["rgb"]["r"] | 0;
-        int g = doc["rgb"]["g"] | 0;
-        int b = doc["rgb"]["b"] | 0;
-
-        Serial.printf("RGB set to R:%d G:%d B:%d\n", r, g, b);
-#if (LoraWan_RGB == 1)
-        uint32_t color = (r << 16) | (g << 8) | b;
-        turnOnRGB(color, 5000);
-        turnOffRGB();
-#endif
-      }
-    }
-
-    if (strcmp(cmd, "off") == 0) {
-#if (LoraWan_RGB == 1)
-      turnOffRGB();
-#endif
-    }
-
-    // Bạn có thể mở rộng thêm nhiều cmd khác ở đây
+    handleCmdDownlink(cmd);  
+  } else {
+    Serial.println("No 'cmd' field found in 'data'");
   }
 }
-
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -213,6 +187,7 @@ void setup() {
 
   // Initialize the DHT sensor
   dht.begin();
+  pinMode(LED_ALARM_PIN, OUTPUT);
 }
 
 void loop() {
@@ -257,5 +232,13 @@ void loop() {
         deviceState = DEVICE_STATE_INIT;
         break;
       }
+  }
+}
+
+void handleCmdDownlink(String cmd) {
+  if (cmd == "led_on") {
+    digitalWrite(LED_ALARM_PIN, HIGH);
+  } else if (cmd == "led_off") {
+    digitalWrite(LED_ALARM_PIN, LOW);
   }
 }

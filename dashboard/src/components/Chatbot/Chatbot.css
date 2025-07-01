@@ -108,9 +108,59 @@
   background: white;
 }
 
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .chat-input {
   border-radius: 20px;
   padding: 8px 12px;
+  width: 100%;
+}
+
+.chat-input .ant-input-prefix {
+  margin-right: 4px;
+}
+
+.suggestions-button {
+  color: #8c8c8c;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-right: 4px;
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.suggestions-button:hover {
+  color: #1677ff;
+}
+
+.suggested-questions-dropdown .ant-dropdown-menu {
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.suggested-questions-dropdown .ant-dropdown-menu-item {
+  padding: 8px 16px;
+  transition: all 0.2s;
+}
+
+.suggested-questions-dropdown .ant-dropdown-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.suggested-questions-dropdown .ant-dropdown-menu-title-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
 }
 
 .send-button {
