@@ -9,7 +9,6 @@ import {
 } from "react-router-dom";
 import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
-import DeviceListReduxExample from './features/device/DeviceListReduxExample';
 import DeviceDetail from './pages/DeviceDetail';
 import Chatbot from './components/Chatbot/Chatbot';
 
@@ -75,11 +74,7 @@ const router = createBrowserRouter([
             element: <DeviceDetail />,
           }
         ]
-      },
-      {
-        path: "/redux-example",
-        element: <DeviceListReduxExample />,
-      },
+      }
     ],
   },
 ]);

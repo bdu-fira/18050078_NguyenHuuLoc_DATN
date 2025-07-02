@@ -13,6 +13,7 @@ import {
   Select,
   Space,
   message,
+  Collapse,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -33,6 +34,7 @@ import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../constants/sensors';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectAllDevices, updateDeviceById } from '../features/device/deviceSlice';
 import SensorList from '../components/Device/SensorList';
+import DeviceFunctions from '../components/Device/DeviceFunctions';
 
 const { Title, Text } = Typography;
 
@@ -356,15 +358,29 @@ const DeviceDetail = () => {
   const navigate = useNavigate();
   const devices = useSelector(selectAllDevices);
   const [loading, setLoading] = useState(true);
-  const device = devices.find(device => device.deviceId === deviceId);
   const [sensorData, setSensorData] = useState([]);
+  const [deviceFunctions, setDeviceFunctions] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(24);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sensorAverages, setSensorAverages] = useState({});
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
+
+  // Initialize device data when component mounts or device changes
+  useEffect(() => {
+    if (device) {
+      if (device.sensors) {
+        setSelectedSensors({...device.sensors});
+      }
+      if (device.functions) {
+        setDeviceFunctions([...device.functions]);
+      }
+    }
+  }, [device]);
 
   const fetchSensorsData = useCallback(async () => {
     if (!deviceId) return;
@@ -372,7 +388,7 @@ const DeviceDetail = () => {
     try {
       setLoading(true);
 
-      // Fetch sensor data in parallel
+      // Fetch sensor data
       const sensorResponse = await sensorDataApi.getSensorData(deviceId, timeRange);
 
       if (sensorResponse?.success) {
@@ -382,7 +398,6 @@ const DeviceDetail = () => {
       } else {
         throw new Error(sensorResponse?.message || 'Failed to fetch sensor data');
       }
-
     } catch (error) {
       console.error('Error:', error);
       message.error(error.message || 'Có lỗi xảy ra khi tải dữ liệu');
@@ -402,13 +417,6 @@ const DeviceDetail = () => {
   const handleTimeRangeChange = (value) => {
     setTimeRange(value);
   };
-
-  // Initialize selected sensors from device data
-  useEffect(() => {
-    if (device?.sensors) {
-      setSelectedSensors({...device.sensors});
-    }
-  }, [device]);
 
   // Initial data fetch and refetch when time range changes
   useEffect(() => {
@@ -436,6 +444,14 @@ const DeviceDetail = () => {
       [sensorName]: value
     }));
   };
+
+  const hasSensorChanges = device?.sensors 
+    ? JSON.stringify(selectedSensors) !== JSON.stringify(device.sensors)
+    : Object.keys(selectedSensors).length > 0;
+    
+  const hasFunctionChanges = device?.functions 
+    ? JSON.stringify(deviceFunctions) !== JSON.stringify(device.functions)
+    : deviceFunctions.length > 0;
 
   // Save sensor configuration
   const handleSaveSensors = async () => {
@@ -481,6 +497,33 @@ const DeviceDetail = () => {
       />
     );
   }
+
+  const deviceSettingsItems = [
+    {
+      key: '1',
+      label: 'Cấu Hình Cảm Biến',
+      children:
+        (
+          <SensorList 
+            sensorOptions={sensorOptions}
+            categoryLabels={categoryLabels}
+            selectedSensors={selectedSensors}
+            onSensorToggle={handleSensorToggle}
+            onThresholdChange={handleThresholdChange}
+          />
+        ),
+    },
+    {
+      key: '2',
+      label: 'Chức năng',
+      children: (
+        <DeviceFunctions 
+          functions={deviceFunctions}
+          onChange={setDeviceFunctions}
+        />
+      ),
+    },
+  ];
 
   return (
     <div style={{ padding: '24px' }}>
@@ -599,28 +642,23 @@ const DeviceDetail = () => {
             label: 'Cài đặt',
             children: (
               <Card style={{ marginTop: 16, minHeight: 0, maxHeight: '100%', minWidth: 0, maxWidth: '100%' }}>
-                <div style={{ marginBottom: 24 }}>
-                  <Title level={4}>Cấu hình cảm biến</Title>
-                  <Text type="secondary">Chọn và cấu hình ngưỡng cảnh báo cho các cảm biến</Text>
-                </div>
-                
-                <SensorList 
-                  sensorOptions={sensorOptions}
-                  categoryLabels={categoryLabels}
-                  selectedSensors={selectedSensors}
-                  onSensorToggle={handleSensorToggle}
-                  onThresholdChange={handleThresholdChange}
+                <Collapse
+                  items={deviceSettingsItems}
+                  defaultActiveKey={['1']}
                 />
                 
                 <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                  <Button onClick={() => setSelectedSensors({...device.sensors})}>
+                  <Button onClick={() => {
+                    setSelectedSensors({...device.sensors})
+                    setDeviceFunctions([...device.functions])
+                  }}>
                     Hủy bỏ
                   </Button>
                   <Button 
                     type="primary" 
                     onClick={handleSaveSensors}
                     loading={isSaving}
-                    disabled={JSON.stringify(selectedSensors) === JSON.stringify(device.sensors || {})}
+                    disabled={!hasSensorChanges && !hasFunctionChanges}
                   >
                     Lưu thay đổi
                   </Button>
