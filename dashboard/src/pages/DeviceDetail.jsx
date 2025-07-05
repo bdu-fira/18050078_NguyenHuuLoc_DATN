@@ -14,6 +14,8 @@ import {
   Space,
   message,
   Collapse,
+  Switch,
+  Divider,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -366,7 +368,7 @@ const DeviceDetail = () => {
   const [sensorAverages, setSensorAverages] = useState({});
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
 
@@ -374,7 +376,7 @@ const DeviceDetail = () => {
   useEffect(() => {
     if (device) {
       if (device.sensors) {
-        setSelectedSensors({...device.sensors});
+        setSelectedSensors({ ...device.sensors });
       }
       if (device.functions) {
         setDeviceFunctions([...device.functions]);
@@ -425,7 +427,7 @@ const DeviceDetail = () => {
 
   // Handle sensor toggle
   const handleSensorToggle = (sensorName) => {
-    const newSelectedSensors = {...selectedSensors};
+    const newSelectedSensors = { ...selectedSensors };
     if (newSelectedSensors.hasOwnProperty(sensorName)) {
       delete newSelectedSensors[sensorName];
     } else {
@@ -445,11 +447,11 @@ const DeviceDetail = () => {
     }));
   };
 
-  const hasSensorChanges = device?.sensors 
+  const hasSensorChanges = device?.sensors
     ? JSON.stringify(selectedSensors) !== JSON.stringify(device.sensors)
     : Object.keys(selectedSensors).length > 0;
-    
-  const hasFunctionChanges = device?.functions 
+
+  const hasFunctionChanges = device?.functions
     ? JSON.stringify(deviceFunctions) !== JSON.stringify(device.functions)
     : deviceFunctions.length > 0;
 
@@ -462,7 +464,7 @@ const DeviceDetail = () => {
         ...device,
         sensors: selectedSensors
       };
-      
+
       const resultAction = await dispatch(updateDeviceById(updatedDevice));
 
       if (updateDeviceById.fulfilled.match(resultAction)) {
@@ -504,7 +506,7 @@ const DeviceDetail = () => {
       label: 'Cấu Hình Cảm Biến',
       children:
         (
-          <SensorList 
+          <SensorList
             sensorOptions={sensorOptions}
             categoryLabels={categoryLabels}
             selectedSensors={selectedSensors}
@@ -517,7 +519,7 @@ const DeviceDetail = () => {
       key: '2',
       label: 'Chức năng',
       children: (
-        <DeviceFunctions 
+        <DeviceFunctions
           functions={deviceFunctions}
           onChange={setDeviceFunctions}
         />
@@ -579,53 +581,82 @@ const DeviceDetail = () => {
             key: 'overview',
             label: 'Tổng quan',
             children: (
-              <Row gutter={[24, 24]}>
-                {device?.sensors && Object.entries(device.sensors).map(([sensorKey, threshold]) => {
-                  const config = chartConfigs[sensorKey];
-                  if (!config) return null;
+              <div>
+                {
+                  deviceFunctions.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+                      <Space>
+                        <Text>Bật đèn LED</Text>
+                        <Switch
+                          checked={deviceFunctions[0].state === 'on'}
+                          onChange={(checked) => {
+                            const updatedFunctions = [...deviceFunctions];
+                            updatedFunctions[0] = {
+                              ...deviceFunctions[0],
+                              state: checked ? 'on' : 'off'
+                            };
+                            setDeviceFunctions(updatedFunctions);
+                            // TODO: Add API call to update device state
+                          }}
+                          checkedChildren="Bật"
+                          unCheckedChildren="Tắt"
+                          style={{
+                            backgroundColor: deviceFunctions[0].state === 'on' ? '#52c41a' : '#f5222d',
+                            minWidth: '80px'
+                          }}
+                        />
+                      </Space>
+                    </div>
+                  )
+                }
+                <Row gutter={[24, 24]}>
+                  {device?.sensors && Object.entries(device.sensors).map(([sensorKey, threshold]) => {
+                    const config = chartConfigs[sensorKey];
+                    if (!config) return null;
 
-                  return (
-                    <Col key={sensorKey} xs={24} md={12} lg={8}>
-                      <ChartCard
-                        title={config.title}
-                        dataKey={config.dataKey}
-                        color={config.color}
-                        unit={config.unit}
-                        domain={[0, threshold * 1.5]}
-                        data={sensorData}
-                        avgValue={sensorAverages[sensorKey]}
-                        threshold={threshold}
-                      >
-                        <Line
-                          type="monotone"
+                    return (
+                      <Col key={sensorKey} xs={24} md={12} lg={8}>
+                        <ChartCard
+                          title={config.title}
                           dataKey={config.dataKey}
-                          name={config.title}
-                          stroke={config.color}
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 6 }}
+                          color={config.color}
                           unit={config.unit}
-                        />
-                        {/* Threshold line */}
-                        <Line
-                          type="monotone"
-                          dataKey={() => threshold}
-                          name="Ngưỡng cảnh báo"
-                          stroke="#faad14"
-                          strokeDasharray="5 5"
-                          dot={false}
-                          strokeWidth={1}
-                        />
-                      </ChartCard>
+                          domain={[0, threshold * 1.5]}
+                          data={sensorData}
+                          avgValue={sensorAverages[sensorKey]}
+                          threshold={threshold}
+                        >
+                          <Line
+                            type="monotone"
+                            dataKey={config.dataKey}
+                            name={config.title}
+                            stroke={config.color}
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 6 }}
+                            unit={config.unit}
+                          />
+                          {/* Threshold line */}
+                          <Line
+                            type="monotone"
+                            dataKey={() => threshold}
+                            name="Ngưỡng cảnh báo"
+                            stroke="#faad14"
+                            strokeDasharray="5 5"
+                            dot={false}
+                            strokeWidth={1}
+                          />
+                        </ChartCard>
+                      </Col>
+                    );
+                  })}
+                  {(!device?.sensors || Object.keys(device.sensors).length === 0) && (
+                    <Col span={24}>
+                      <Empty description="Không có cảm biến nào được cấu hình cho thiết bị này" />
                     </Col>
-                  );
-                })}
-                {(!device?.sensors || Object.keys(device.sensors).length === 0) && (
-                  <Col span={24}>
-                    <Empty description="Không có cảm biến nào được cấu hình cho thiết bị này" />
-                  </Col>
-                )}
-              </Row>
+                  )}
+                </Row>
+              </div>
             )
           },
           {
@@ -646,16 +677,16 @@ const DeviceDetail = () => {
                   items={deviceSettingsItems}
                   defaultActiveKey={['1']}
                 />
-                
+
                 <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                   <Button onClick={() => {
-                    setSelectedSensors({...device.sensors})
+                    setSelectedSensors({ ...device.sensors })
                     setDeviceFunctions([...device.functions])
                   }}>
                     Hủy bỏ
                   </Button>
-                  <Button 
-                    type="primary" 
+                  <Button
+                    type="primary"
                     onClick={handleSaveSensors}
                     loading={isSaving}
                     disabled={!hasSensorChanges && !hasFunctionChanges}

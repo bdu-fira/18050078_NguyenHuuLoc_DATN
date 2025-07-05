@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const webhookController = require('./controllers/webhookController');
+const ttnRoutes = require('./routes/ttnRoutes');
 
 // Import routes
 const deviceRoutes = require('./routes/deviceRoutes');
@@ -87,6 +88,7 @@ process.on('SIGINT', async () => {
 // API routes
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
+app.use('/api/ttn', ttnRoutes);
 
 // Webhooks
 app.post(

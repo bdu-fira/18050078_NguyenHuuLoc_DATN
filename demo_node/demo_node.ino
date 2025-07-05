@@ -94,6 +94,8 @@ void readDHTSensor() {
 
 // LED
 #define LED_ALARM_PIN 2
+bool ledState = false;
+
 
 /* Prepares the payload of the frame */
 static void prepareTxFrame(uint8_t port) {
@@ -188,9 +190,12 @@ void setup() {
   // Initialize the DHT sensor
   dht.begin();
   pinMode(LED_ALARM_PIN, OUTPUT);
+  digitalWrite(LED_ALARM_PIN, ledState ? HIGH : LOW);
+
 }
 
 void loop() {
+   digitalWrite(LED_ALARM_PIN, ledState ? HIGH : LOW);
   switch (deviceState) {
     case DEVICE_STATE_INIT:
       {
@@ -237,8 +242,10 @@ void loop() {
 
 void handleCmdDownlink(String cmd) {
   if (cmd == "led_on") {
+    ledState = true;
     digitalWrite(LED_ALARM_PIN, HIGH);
   } else if (cmd == "led_off") {
+    ledState = false;
     digitalWrite(LED_ALARM_PIN, LOW);
   }
 }

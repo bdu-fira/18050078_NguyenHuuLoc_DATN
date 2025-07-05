@@ -42,6 +42,11 @@ const deviceSchema = new mongoose.Schema({
       type: String,
       trim: true,
       default: ''
+    },
+    state: {
+      type: String,
+      enum: ['on', 'off'],
+      default: 'off'
     }
   }],
   location: {
