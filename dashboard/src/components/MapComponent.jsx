@@ -1,5 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet'
 
+import 'leaflet/dist/leaflet.css';
+
 const MapComponent = ({ center, zoom, listDevices = [] }) => {
   const listMarkers = listDevices.map((device) => {
     return (
