@@ -4,10 +4,9 @@ services:
     container_name: dashboard
     restart: always
     ports:
-      - "3001:80"
+      - "3001:5173"
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=http://nodejs-app:3000/api
     depends_on:
       - nodejs-app
     networks:
