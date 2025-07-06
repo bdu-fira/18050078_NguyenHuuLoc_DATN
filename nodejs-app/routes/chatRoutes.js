@@ -3,7 +3,7 @@ const router = express.Router();
 const chatController = require('../controllers/chatController');
 
 // Send a message to the chatbot
-router.post('/chat', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { userId, message } = req.body;
         
@@ -26,7 +26,7 @@ router.post('/chat', async (req, res) => {
 });
 
 // Clear chat history for a user
-router.post('/chat/clear', (req, res) => {
+router.post('/clear', (req, res) => {
     try {
         const { userId } = req.body;
         
