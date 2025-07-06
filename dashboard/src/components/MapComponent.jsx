@@ -17,7 +17,7 @@ const MapComponent = ({ center, zoom, listDevices = [] }) => {
   })
   return (
     <div style={{ height: '100%', width: '100%', }}>
-      <MapContainer center={center} zoom={zoom} scrollWheelZoom={false}>
+      <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} zoomSnap={1} zoomDelta={1}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
