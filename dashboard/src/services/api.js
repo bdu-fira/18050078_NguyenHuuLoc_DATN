@@ -109,4 +109,29 @@ export const sensorDataApi = {
   },
 };
 
+// Chat APIs
+export const chatApi = {
+  // Send a chat message
+  sendMessage: async (userId, message) => {
+    try {
+      const response = await api.post('/chat', { userId, message });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      throw error;
+    }
+  },
+
+  // Clear chat history for a user
+  clearChatHistory: async (userId) => {
+    try {
+      const response = await api.post('/chat/clear', { userId });
+      return response.data;
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
+      throw error;
+    }
+  }
+};
+
 export default api;

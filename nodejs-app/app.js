@@ -8,6 +8,7 @@ const ttnRoutes = require('./routes/ttnRoutes');
 // Import routes
 const deviceRoutes = require('./routes/deviceRoutes');
 const sensorDataRoutes = require('./routes/sensorDataRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 
@@ -89,6 +90,7 @@ process.on('SIGINT', async () => {
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
 app.use('/api/ttn', ttnRoutes);
+app.use('/api', chatRoutes);
 
 // Webhooks
 app.post(
