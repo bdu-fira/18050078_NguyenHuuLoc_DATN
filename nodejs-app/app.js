@@ -90,7 +90,7 @@ process.on('SIGINT', async () => {
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
 app.use('/api/ttn', ttnRoutes);
-app.use('/api', chatRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Webhooks
 app.post(
