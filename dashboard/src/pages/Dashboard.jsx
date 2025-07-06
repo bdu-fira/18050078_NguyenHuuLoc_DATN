@@ -84,7 +84,7 @@ const Dashboard = () => {
             className="site-layout-background"
             style={{ height: '100%', minHeight: '500px' }}
           >
-            <MapComponent center={devices?.[0]?.location || [10.967038337798492, 106.72305285930635]} zoom={15} listDevices={devices} />
+            <MapComponent center={devices?.[0]?.location || [9.966512684106705, 105.245418548584]} zoom={15} listDevices={devices} />
           </Card>
         </Col>
       </Row>
