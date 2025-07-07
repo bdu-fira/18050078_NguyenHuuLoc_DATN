@@ -23,19 +23,45 @@ const getUserId = () => {
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: Date.now(),
-      text: 'Xin chào! Tôi là trợ lý ảo của hệ thống giám sát môi trường. Tôi có thể giúp gì cho bạn hôm nay?',
-      sender: 'bot',
-      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [userId] = useState(getUserId());
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+
+  // Scroll to latest message when messages change or when chat opens
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages, isOpen]);
   
+  // Load chat history when component mounts
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        const response = await chatApi.getChatHistory(userId);
+        if (response.success) {
+          setMessages(response.messages);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        // Add a welcome message if no history exists
+        if (messages.length === 0) {
+          setMessages([{
+            id: Date.now(),
+            text: 'Xin chào! Tôi là trợ lý ảo của hệ thống giám sát môi trường. Tôi có thể giúp gì cho bạn hôm nay?',
+            sender: 'bot',
+            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          }]);
+        }
+      }
+    };
+    
+    loadChatHistory();
+  }, [userId]);
+
   const suggestedQuestions = [
     {
       key: '1',
@@ -125,7 +151,10 @@ const Chatbot = () => {
             />
           </div>
           
-          <div className="chat-messages">
+          <div 
+            className="chat-messages" 
+            ref={messagesContainerRef}
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}

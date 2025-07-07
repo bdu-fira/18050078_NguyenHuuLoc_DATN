@@ -1,13 +1,47 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SensorData = require('../models/sensorData');
 const Device = require('../models/device');
+const ChatHistory = require('../models/chatHistory');
 require('dotenv').config();
 
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Chat history storage (in production, you might want to use a database)
+// Chat history storage (in memory for current session)
 const chatHistory = new Map();
+
+// Save chat history to database
+const saveChatHistory = async (userId, message, sender) => {
+  try {
+    // Get or create chat history document
+    let chatDoc = await ChatHistory.findOne({ userId });
+    
+    if (!chatDoc) {
+      chatDoc = new ChatHistory({ userId });
+    }
+    
+    // Add new message
+    chatDoc.messages.push({
+      role: sender,
+      text: message,
+      timestamp: new Date()
+    });
+    
+    // Keep only last 50 messages
+    if (chatDoc.messages.length > 50) {
+      chatDoc.messages = chatDoc.messages.slice(-50);
+    }
+    
+    // Update last updated timestamp
+    chatDoc.lastUpdated = new Date();
+    
+    // Save to database
+    await chatDoc.save();
+    
+  } catch (error) {
+    console.error('Error saving chat history:', error);
+  }
+};
 
 // Get sensor data from the last 24 hours, grouped by device with names
 const getSensorData = async () => {
@@ -138,10 +172,22 @@ const generateResponse = async (userId, message) => {
         // Add the assistant's response to the history
         history.push(userMessage, { role: 'model', parts: [{ text }] });
         
+        // Save chat messages to database
+        await saveChatHistory(userId, message, 'user');
+        await saveChatHistory(userId, text, 'bot');
+        
         // Keep only the last 5 message pairs (5 Q&A) to manage context size
         const maxPairs = 5;
         if (history.length > maxPairs * 2) {
+            // Remove oldest messages from in-memory history
             history.splice(0, history.length - (maxPairs * 2));
+            
+            // Update database history
+            const chatDoc = await ChatHistory.findOne({ userId });
+            if (chatDoc) {
+                chatDoc.messages = chatDoc.messages.slice(-maxPairs * 2);
+                await chatDoc.save();
+            }
         }
         
         return {
