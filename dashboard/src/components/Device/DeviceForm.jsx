@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Modal, message, Row, Col, Collapse } from 'antd';
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../../constants/sensors';
 import { useDispatch } from 'react-redux';
 import { addNewDevice, updateDeviceById } from '../../features/device/deviceSlice';
 import SensorList from './SensorList';
+import DeviceFunctions from './DeviceFunctions';
 
 const categoryLabels = SENSOR_CATEGORIES;
 
@@ -20,6 +21,8 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
   const dispatch = useDispatch();
   const [loading, setLoading] = React.useState(false);
   const [selectedSensors, setSelectedSensors] = React.useState({});
+
+  const [deviceFunctions, setDeviceFunctions] = useState([]);
 
   // Set form initial values
   useEffect(() => {
@@ -41,6 +44,13 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
 
       // Initialize selectedSensors with sensors that have values
       setSelectedSensors(sensorValues);
+      
+      // Initialize device functions
+      if (initialValues?.functions) {
+        setDeviceFunctions(Array.isArray(initialValues.functions) ? initialValues.functions : []);
+      } else {
+        setDeviceFunctions([]);
+      }
 
       const timer = setTimeout(() => {
         if (form && typeof form.setFieldsValue === 'function') {
@@ -55,6 +65,7 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
         form.resetFields();
       }
       setSelectedSensors({});
+      setDeviceFunctions([]);
     }
   }, [open, initialValues, form]);
 
@@ -97,14 +108,36 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     return Promise.resolve();
   };
 
+  const validateFunctions = () => {
+    if (deviceFunctions.length > 0 && (!deviceFunctions.every(func => func.name && func.type && func.pin))) {
+      message.warning('Thiết bị của bạn chưa có chức năng nào. Vui lòng thêm ít nhất một chức năng.');
+      return false;
+    }
+    
+    // Validate each function has required fields
+    const invalidFunction = deviceFunctions.find(func => !func.name || !func.type || !func.pin);
+    if (invalidFunction) {
+      message.error('Vui lòng kiểm tra lại thông tin các chức năng');
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
 
+      // Validate functions before submission
+      if (!validateFunctions()) {
+        setLoading(false);
+        return;
+      }
+
       // Use the selectedSensors object directly since it's already in sync with the form
       const sensors = { ...selectedSensors };
 
-      // Prepare device data
+      // Prepare device data with properly formatted functions
       const deviceData = {
         name: values.name,
         description: values.description || '',
@@ -112,7 +145,15 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
           lat: parseFloat(values.location?.lat) || 0,
           lng: parseFloat(values.location?.lng) || 0
         },
-        sensors
+        sensors,
+        functions: deviceFunctions.map((func, index) => ({
+          ...func,
+          // Ensure all required fields have proper values
+          status: func.status || false,
+          value: func.value || 0,
+          label: func.label || func.name,
+          icon: func.icon || 'setting'
+        }))
       };
 
       console.log('Submitting device data:', deviceData);
@@ -170,6 +211,16 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
     },
     {
       key: '2',
+      label: 'Chức năng',
+      children: (
+        <DeviceFunctions 
+          functions={deviceFunctions}
+          onChange={setDeviceFunctions}
+        />
+      ),
+    },
+    {
+      key: '3',
       label: 'Vị trí đặt thiết bị',
       children:
         (

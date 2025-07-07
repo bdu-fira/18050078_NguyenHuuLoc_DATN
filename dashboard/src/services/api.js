@@ -109,4 +109,41 @@ export const sensorDataApi = {
   },
 };
 
+// Chat APIs
+export const chatApi = {
+  // Send a chat message
+  sendMessage: async (userId, message) => {
+    try {
+      const response = await axios.post(`${API_URL}/chat`, {
+        userId,
+        message
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      throw error;
+    }
+  },
+  // Get chat history
+  getChatHistory: async (userId) => {
+    try {
+      const response = await axios.get(`${API_URL}/chat/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting chat history:', error);
+      throw error;
+    }
+  },
+  // Clear chat history for a user
+  clearChatHistory: async (userId) => {
+    try {
+      const response = await axios.post(`${API_URL}/chat/clear`, { userId });
+      return response.data;
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
+      throw error;
+    }
+  }
+};
+
 export default api;

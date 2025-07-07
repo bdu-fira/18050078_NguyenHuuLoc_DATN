@@ -7,6 +7,48 @@ const deviceSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
+  functions: [{
+    name: {
+      type: String,
+      required: true,
+      enum: ['led', 'relay', 'motor', 'fan', 'pump'],
+      trim: true
+    },
+    type: {
+      type: String,
+      required: true,
+      enum: ['switch', 'dimmer', 'button'],
+      default: 'switch'
+    },
+    pin: {
+      type: Number,
+      required: true
+    },
+    status: {
+      type: Boolean,
+      default: false
+    },
+    value: {
+      type: Number,
+      min: 0,
+      max: 255,
+      default: 0
+    },
+    label: {
+      type: String,
+      trim: true
+    },
+    icon: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    state: {
+      type: String,
+      enum: ['on', 'off'],
+      default: 'off'
+    }
+  }],
   location: {
     lat: {
       type: Number,

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  Row, 
-  Col, 
-  Typography, 
-  Button, 
-  Divider, 
-  Collapse, 
+import {
+  Row,
+  Col,
+  Typography,
+  Button,
+  Divider,
+  Collapse,
   Card,
   Statistic,
   Space,
@@ -15,18 +15,14 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectAllDevices } from '../features/device/deviceSlice';
 import DeviceContent from '../components/Device/DeviceContent';
-import GoogleMap from '../components/GoogleMap';
+import MapComponent from '../components/MapComponent';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Content } = Layout;
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const devices = useSelector(selectAllDevices);
-
-  const handleDeviceClick = (deviceId) => {
-    navigate(`/devices/${deviceId}`);
-  };
 
   const handleViewAllDevices = () => {
     navigate('/devices');
@@ -45,13 +41,13 @@ const Dashboard = () => {
       <Row gutter={[24, 24]}>
         {/* Left Sidebar */}
         <Col xs={24} md={8}>
-          <Card 
-            className="site-layout-background" 
+          <Card
+            className="site-layout-background"
             style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
           >
-            <Statistic 
-              title="Tổng số thiết bị" 
-              value={devices.length} 
+            <Statistic
+              title="Tổng số thiết bị"
+              value={devices.length}
               valueStyle={{ color: '#1890ff' }}
               style={{ marginBottom: 24 }}
             />
@@ -63,8 +59,8 @@ const Dashboard = () => {
                 Danh sách thiết bị
               </Text>
               <div style={{ flex: 1, overflow: 'auto', paddingRight: 8 }}>
-                <Collapse 
-                  items={listDevicesColapse} 
+                <Collapse
+                  items={listDevicesColapse}
                   defaultActiveKey={[]}
                 />
               </div>
@@ -84,11 +80,11 @@ const Dashboard = () => {
 
         {/* Right Content */}
         <Col xs={24} md={16}>
-          <Card 
-            className="site-layout-background" 
+          <Card
+            className="site-layout-background"
             style={{ height: '100%', minHeight: '500px' }}
           >
-            <GoogleMap />
+            <MapComponent center={devices?.[0]?.location || [9.966512684106705, 105.245418548584]} zoom={15} listDevices={devices} />
           </Card>
         </Col>
       </Row>
