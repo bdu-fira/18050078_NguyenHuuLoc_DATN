@@ -146,4 +146,46 @@ export const chatApi = {
   }
 };
 
-export default api;
+export const settingsApi = {
+    // Prompt API
+    getPrompt: async () => {
+        try {
+            const response = await axios.get(`${API_URL}/settings/prompt`);
+            return response.data;
+        } catch (error) {
+            console.error('Error getting prompt:', error);
+            throw error;
+        }
+    },
+    updatePrompt: async ({ systemPrompt, userPrompt }) => {
+        try {
+            const response = await axios.post(`${API_URL}/settings/prompt`, { 
+                systemPrompt, 
+                userPrompt 
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error updating prompt:', error);
+            throw error;
+        }
+    },
+    // Thresholds API
+    getThresholds: async () => {
+        try {
+            const response = await axios.get(`${API_URL}/settings/thresholds`);
+            return response.data;
+        } catch (error) {
+            console.error('Error getting thresholds:', error);
+            throw error;
+        }
+    },
+    updateThresholds: async (thresholds) => {
+        try {
+            const response = await axios.post(`${API_URL}/settings/thresholds`, thresholds);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating thresholds:', error);
+            throw error;
+        }
+    }
+};

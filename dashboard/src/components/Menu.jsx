@@ -44,6 +44,11 @@ const AppMenu = (props) => {
       label: <Link to="/devices">Thiết bị</Link>,
       icon: <CodeOutlined />,
     },
+    {
+      key: 'setting',
+      label: <Link to="/setting">Cài đặt</Link>,
+      icon: <CodeOutlined />,
+    },
   ];
   // Get the current path to set the selected keys
   const getSelectedKeys = () => {
