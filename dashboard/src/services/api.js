@@ -95,12 +95,33 @@ export const deviceApi = {
 
 // Sensor Data APIs
 export const sensorDataApi = {
-  // Get sensor data by device ID and time range
-  getSensorData: async (deviceId, hours = 24) => {
+  // Get sensor data by device ID and time range or date range
+  getSensorData: async (deviceId, params = {}) => {
     try {
-      const response = await api.get('/sensor-data', {
-        params: { deviceId, hours }
+      // Handle both object params and legacy hours parameter
+      const queryParams = { deviceId };
+      
+      if (typeof params === 'number') {
+        // Legacy format: (deviceId, hours)
+        queryParams.hours = params;
+      } else if (params && typeof params === 'object') {
+        // New format with date range
+        if (params.startDate && params.endDate) {
+          // Use the timestamps directly as they're already in milliseconds
+          queryParams.startDate = params.startDate;
+          queryParams.endDate = params.endDate;
+        } else if (params.hours) {
+          queryParams.hours = params.hours;
+        }
+      }
+      
+      const response = await api.get('/sensor-data', { 
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null // Prevent array bracket notation in query params
+        }
       });
+      
       return response.data;
     } catch (error) {
       console.error(`Error fetching sensor data for device ${deviceId}:`, error);
