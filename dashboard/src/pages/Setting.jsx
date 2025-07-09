@@ -62,7 +62,7 @@ const Setting = () => {
   const items = [
     {
       key: 'prompt',
-      label: 'Prompt Gemini',
+      label: 'Prompt',
       children: (
         <Form
           form={form}

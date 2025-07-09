@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { AppstoreOutlined, PartitionOutlined, CodeOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, PartitionOutlined, CodeOutlined, SettingOutlined } from '@ant-design/icons';
 import { Menu } from 'antd';
 import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -47,7 +47,7 @@ const AppMenu = (props) => {
     {
       key: 'setting',
       label: <Link to="/setting">Cài đặt</Link>,
-      icon: <CodeOutlined />,
+      icon: <SettingOutlined />,
     },
   ];
   // Get the current path to set the selected keys

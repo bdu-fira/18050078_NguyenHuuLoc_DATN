@@ -27,6 +27,7 @@ import {
   Switch,
   Divider,
   DatePicker,
+  Modal,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -383,6 +384,7 @@ const DeviceDetail = () => {
   const [sensorAverages, setSensorAverages] = useState({});
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
 
   const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
@@ -398,6 +400,19 @@ const DeviceDetail = () => {
       }
     }
   }, [device]);
+
+  const handleTimeRangeApply = () => {
+    fetchSensorsData();
+    setIsTimeModalVisible(false);
+  };
+
+  const handleTimeRangeCancel = () => {
+    setIsTimeModalVisible(false);
+  };
+
+  const handleOpenTimeModal = () => {
+    setIsTimeModalVisible(true);
+  };
 
   const fetchSensorsData = useCallback(async () => {
     if (!deviceId) return;
@@ -570,26 +585,45 @@ const DeviceDetail = () => {
           </div>
 
           <Space size="middle">
-            <Space direction="vertical" size="small">
-              <Space>
-                <ClockCircleOutlined />
-                <Text>Chế độ:</Text>
-                <Switch
-                  checkedChildren="Tùy chỉnh"
-                  unCheckedChildren="Tự động"
-                  checked={useCustomDate}
-                  onChange={checked => {
-                    setUseCustomDate(checked);
-                    if (!checked) {
-                      // Reset về mặc định khi chuyển về chế độ tự động
-                      setTimeRange(24);
-                    }
-                  }}
-                />
-              </Space>
+            <Button 
+              type="text" 
+              icon={<ClockCircleOutlined />}
+              onClick={handleOpenTimeModal}
+            >
+              {useCustomDate 
+                ? dateRange?.[0] && dateRange?.[1] 
+                  ? `${dayjs(dateRange[0]).format('DD/MM/YYYY HH:mm')} - ${dayjs(dateRange[1]).format('DD/MM/YYYY HH:mm')}`
+                  : 'Chọn khoảng thời gian'
+                : `Tự động (${timeRange} giờ)`
+              }
+            </Button>
 
-              {useCustomDate ? (
+            <Modal
+              title="Chọn khoảng thời gian"
+              open={isTimeModalVisible}
+              onOk={handleTimeRangeApply}
+              onCancel={handleTimeRangeCancel}
+              width={600}
+              okText="Áp dụng"
+              cancelText="Hủy"
+            >
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Space>
+                  <Text>Chế độ:</Text>
+                  <Switch
+                    checkedChildren="Tùy chỉnh"
+                    unCheckedChildren="Tự động"
+                    checked={useCustomDate}
+                    onChange={checked => {
+                      setUseCustomDate(checked);
+                      if (!checked) {
+                        setTimeRange(24);
+                      }
+                    }}
+                  />
+                </Space>
+
+                {useCustomDate ? (
                   <RangePicker
                     value={dateRange}
                     showTime={{
@@ -597,27 +631,18 @@ const DeviceDetail = () => {
                       showNow: true
                     }}
                     format="DD/MM/YYYY HH:mm"
-                    onCalendarChange={(val) => {
-                      setDates(val);
-                    }}
+                    onCalendarChange={(val) => setDates(val)}
                     onChange={(val) => {
                       if (val && val[0] && val[1]) {
                         const start = dayjs(val[0]).startOf('minute');
                         const end = dayjs(val[1]).startOf('minute');
                         setDateRange([start, end]);
-                        // Fetch data when date range is selected
-                        fetchSensorsData();
                       } else {
                         setDateRange([null, null]);
                       }
                       setDates(null);
                     }}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setDates(null);
-                      }
-                    }}
-                    style={{ width: 400 }}
+                    style={{ width: '100%' }}
                     presets={[
                       {
                         label: 'Hôm nay',
@@ -646,25 +671,25 @@ const DeviceDetail = () => {
                       }
                     ]}
                   />
-                </Space>
-              ) : (
-                <Space>
-                  <Text>Khoảng thời gian:</Text>
-                  <Select
-                    value={timeRange}
-                    onChange={handleTimeRangeChange}
-                    style={{ width: 150 }}
-                    disabled={loading}
-                  >
-                    {TIME_RANGES.map(range => (
-                      <Select.Option key={range.value} value={range.value}>
-                        {range.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Space>
-              )}
-            </Space>
+                ) : (
+                  <Space>
+                    <Text>Khoảng thời gian:</Text>
+                    <Select
+                      value={timeRange}
+                      onChange={handleTimeRangeChange}
+                      style={{ width: 150 }}
+                      disabled={loading}
+                    >
+                      {TIME_RANGES.map(range => (
+                        <Select.Option key={range.value} value={range.value}>
+                          {range.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Space>
+                )}
+              </Space>
+            </Modal>
 
             <Button
               icon={<ReloadOutlined spin={isRefreshing} />}
