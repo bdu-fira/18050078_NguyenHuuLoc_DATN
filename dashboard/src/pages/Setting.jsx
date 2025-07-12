@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, Form, Input, Button, message, Spin } from 'antd';
+import { Tabs, Input, Button, message, Spin } from 'antd';
 import { SENSOR_OPTIONS } from '../constants/sensors';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchAllSettings, upsertSetting, updateSetting } from '../features/setting/settingsSlice';
-import { ThresholdSettings } from '../components/ThresholdSettings';
+import { ThresholdSettings } from '../components/Setting/ThresholdSettings';
+import { PromptSetting } from '../components/Setting/PromptSetting';
 
 const Setting = () => {
-  const [form] = Form.useForm();
   const dispatch = useDispatch();
   const {
     prompt = { system: '', user: '' },
@@ -34,16 +34,6 @@ const Setting = () => {
     loadSettings();
   }, [dispatch]);
 
-  // Update prompt form when settings change
-  useEffect(() => {
-    if (prompt && (prompt.system !== undefined || prompt.user !== undefined)) {
-      form.setFieldsValue({
-        systemPrompt: prompt.system || '',
-        userPrompt: prompt.user || ''
-      });
-    }
-  }, [prompt, form]);
-
   // Handle tab change
   const handleTabChange = (key) => {
     setActiveTab(key);
@@ -60,7 +50,7 @@ const Setting = () => {
           user: values.userPrompt
         };
       }
-      
+
       await dispatch(upsertSetting({
         type,
         data
@@ -111,45 +101,12 @@ const Setting = () => {
       key: 'prompt',
       label: 'Cài đặt Prompt',
       children: (
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSavePrompt}
-          disabled={loading && operation === 'updating'}
-        >
-          <Form.Item
-            name="systemPrompt"
-            label="System Prompt"
-            rules={[{ required: true, message: 'Vui lòng nhập system prompt' }]}
-          >
-            <Input.TextArea
-              rows={4}
-              placeholder="Nhập system prompt..."
-              disabled={loading && operation === 'updating'}
-            />
-          </Form.Item>
-          <Form.Item
-            name="userPrompt"
-            label="User Prompt"
-            rules={[{ required: true, message: 'Vui lòng nhập user prompt' }]}
-          >
-            <Input.TextArea
-              rows={4}
-              placeholder="Nhập user prompt..."
-              disabled={loading && operation === 'updating'}
-            />
-          </Form.Item>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading && operation === 'updating'}
-              disabled={loading && operation === 'fetching'}
-            >
-              Lưu Prompt
-            </Button>
-          </Form.Item>
-        </Form>
+        <PromptSetting
+          loading={loading}
+          operation={operation}
+          initialValues={prompt}
+          onSave={handleSavePrompt}
+        />
       ),
     },
     {

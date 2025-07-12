@@ -156,8 +156,6 @@ const DeviceForm = ({ open, onCancel, initialValues, isEditing = false, onSucces
         }))
       };
 
-      console.log('Submitting device data:', deviceData);
-
       if (isEditing && initialValues?.deviceId) {
         await dispatch(updateDeviceById({
           deviceId: initialValues.deviceId,
