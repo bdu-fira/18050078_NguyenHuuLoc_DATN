@@ -8,6 +8,7 @@ const deviceRoutes = require('./routes/deviceRoutes');
 const sensorDataRoutes = require('./routes/sensorDataRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const settingsRoutes = require('./routes/settings');
+const settingRoutes = require('./routes/settingRoutes');
 
 const app = express();
 
@@ -86,11 +87,12 @@ process.on('SIGINT', async () => {
 });
 
 // API routes
+app.use('/api/ttn', ttnRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/sensor-data', sensorDataRoutes);
-app.use('/api/ttn', ttnRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/v1/settings', settingRoutes);
 
 // Webhooks
 app.post(

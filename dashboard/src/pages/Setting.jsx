@@ -1,102 +1,152 @@
-import React from 'react';
-import { Tabs, Form, Input, Button, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Tabs, Form, Input, Button, message, Spin } from 'antd';
 import { SENSOR_OPTIONS } from '../constants/sensors';
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchPrompt, fetchThresholds, updatePrompt, updateThresholds } from '../store/settingsSlice';
-import { Space } from 'antd';
-
-const { TabPane } = Tabs;
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchAllSettings, upsertSetting, updateSetting } from '../features/setting/settingsSlice';
+import { ThresholdSettings } from '../components/ThresholdSettings';
 
 const Setting = () => {
   const [form] = Form.useForm();
-  const [thresholdForm] = Form.useForm();
   const dispatch = useDispatch();
-  const { prompt, thresholds, loading } = useSelector((state) => state.settings);
+  const {
+    prompt = { system: '', user: '' },
+    thresholds = {},
+    loading,
+    operation = 'fetching',
+    settingsByType = {}
+  } = useSelector((state) => state.settings);
 
-  // Load initial data when component mounts
-  React.useEffect(() => {
-    dispatch(fetchPrompt());
-    dispatch(fetchThresholds());
+  const [activeTab, setActiveTab] = useState('prompt');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Load all settings on component mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        await dispatch(fetchAllSettings()).unwrap();
+      } catch (error) {
+        message.error('Không thể tải cài đặt: ' + (error.message || 'Lỗi không xác định'));
+      } finally {
+        setIsInitialLoad(false);
+      }
+    };
+
+    loadSettings();
   }, [dispatch]);
 
-  // Update form values when prompt or thresholds change
-  React.useEffect(() => {
-    if (prompt) {
+  // Update prompt form when settings change
+  useEffect(() => {
+    if (prompt && (prompt.system !== undefined || prompt.user !== undefined)) {
       form.setFieldsValue({
-        systemPrompt: prompt.system,
-        userPrompt: prompt.user
+        systemPrompt: prompt.system || '',
+        userPrompt: prompt.user || ''
       });
     }
-    if (thresholds) {
-      thresholdForm.setFieldsValue(thresholds);
-    }
-  }, [prompt, thresholds, form, thresholdForm]);
+  }, [prompt, form]);
 
-
-
-  // Save thresholds to backend
-  const handleSaveThresholds = async (values) => {
-    try {
-      await dispatch(updateThresholds(values));
-      message.success('Đã lưu ngưỡng cảnh báo thành công');
-    } catch (error) {
-      console.error('Error saving thresholds:', error);
-      message.error('Đã xảy ra lỗi khi lưu ngưỡng cảnh báo');
-    }
+  // Handle tab change
+  const handleTabChange = (key) => {
+    setActiveTab(key);
   };
 
-  // Save prompt to backend
-  const handleSavePrompt = async (values) => {
+  // Save settings to server
+  const saveSetting = async (type, values) => {
     try {
-      await dispatch(updatePrompt({
-        systemPrompt: values.systemPrompt,
-        userPrompt: values.userPrompt
+      // Format values based on setting type
+      let data = values;
+      if (type === 'prompt') {
+        data = {
+          system: values.systemPrompt,
+          user: values.userPrompt
+        };
+      }
+      
+      await dispatch(upsertSetting({
+        type,
+        data
       })).unwrap();
-      message.success('Đã lưu prompt thành công');
+
+      // Update local state immediately
+      dispatch(updateSetting({
+        type,
+        data
+      }));
+
+      message.success(`Đã cập nhật ${type === 'prompt' ? 'prompt' : 'ngưỡng'} thành công`);
+      return true;
     } catch (error) {
-      console.error('Error saving prompt:', error);
-      message.error(error.message || 'Đã xảy ra lỗi khi lưu prompt');
+      console.error('Error saving setting:', error);
+      message.error(`Lỗi khi lưu ${type === 'prompt' ? 'prompt' : 'ngưỡng'}: ${error.message || 'Lỗi không xác định'}`);
+      return false;
     }
   };
+
+  // Handle save prompt
+  const handleSavePrompt = async (values) => {
+    await saveSetting('prompt', values);
+  };
+
+  // Handle save threshold
+  const handleThresholdSubmit = async (values) => {
+    await saveSetting('threshold', values);
+  };
+
+  if (isInitialLoad) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '50vh'
+      }}>
+        <Spin size="large">
+          <div style={{ padding: '24px' }}>Đang tải cài đặt...</div>
+        </Spin>
+      </div>
+    );
+  }
 
   const items = [
     {
       key: 'prompt',
-      label: 'Prompt',
+      label: 'Cài đặt Prompt',
       children: (
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSavePrompt}
-          initialValues={{ prompt }}
+          disabled={loading && operation === 'updating'}
         >
           <Form.Item
             name="systemPrompt"
             label="System Prompt"
-            tooltip="Định nghĩa vai trò và hành vi của AI"
+            rules={[{ required: true, message: 'Vui lòng nhập system prompt' }]}
           >
             <Input.TextArea
               rows={4}
               placeholder="Nhập system prompt..."
+              disabled={loading && operation === 'updating'}
             />
           </Form.Item>
           <Form.Item
             name="userPrompt"
             label="User Prompt"
-            tooltip="Hướng dẫn cách AI xử lý yêu cầu người dùng"
+            rules={[{ required: true, message: 'Vui lòng nhập user prompt' }]}
           >
             <Input.TextArea
               rows={4}
               placeholder="Nhập user prompt..."
+              disabled={loading && operation === 'updating'}
             />
           </Form.Item>
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
-              loading={loading}
+              loading={loading && operation === 'updating'}
+              disabled={loading && operation === 'fetching'}
             >
-              Lưu prompt
+              Lưu Prompt
             </Button>
           </Form.Item>
         </Form>
@@ -106,53 +156,25 @@ const Setting = () => {
       key: 'thresholds',
       label: 'Ngưỡng cảnh báo',
       children: (
-        <Form
-          form={thresholdForm}
-          layout="vertical"
-          onFinish={handleSaveThresholds}
+        <ThresholdSettings
+          sensors={SENSOR_OPTIONS}
+          loading={loading}
+          operation={operation}
           initialValues={thresholds}
-        >
-          {SENSOR_OPTIONS.map((sensor) => (
-            <Form.Item
-              key={sensor.name}
-              name={sensor.name}
-              label={
-                <Space>
-                  <sensor.icon style={{ marginRight: 8, color: sensor.color }} />
-                  {sensor.label}
-                </Space>
-              }
-            >
-              <Input
-                addonAfter={sensor.unit}
-                placeholder={`Nhập ngưỡng ${sensor.label}`}
-              />
-            </Form.Item>
-          ))}
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-            >
-              Lưu ngưỡng cảnh báo
-            </Button>
-          </Form.Item>
-        </Form>
+          onSave={handleThresholdSubmit}
+        />
       ),
-    }
+    },
   ];
 
   return (
     <div style={{ padding: '24px' }}>
-      <Tabs items={items} />
-
-      {/* Display loading state */}
-      {loading && (
-        <div style={{ color: '#1890ff', marginTop: '16px' }}>
-          Đang tải dữ liệu...
-        </div>
-      )}
+      <Tabs
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={items}
+        style={{ width: '100%' }}
+      />
     </div>
   );
 };

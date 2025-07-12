@@ -168,45 +168,96 @@ export const chatApi = {
 };
 
 export const settingsApi = {
-    // Prompt API
-    getPrompt: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/settings/prompt`);
-            return response.data;
-        } catch (error) {
-            console.error('Error getting prompt:', error);
-            throw error;
-        }
-    },
-    updatePrompt: async ({ systemPrompt, userPrompt }) => {
-        try {
-            const response = await axios.post(`${API_URL}/settings/prompt`, { 
-                systemPrompt, 
-                userPrompt 
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Error updating prompt:', error);
-            throw error;
-        }
-    },
-    // Thresholds API
-    getThresholds: async () => {
-        try {
-            const response = await axios.get(`${API_URL}/settings/thresholds`);
-            return response.data;
-        } catch (error) {
-            console.error('Error getting thresholds:', error);
-            throw error;
-        }
-    },
-    updateThresholds: async (thresholds) => {
-        try {
-            const response = await axios.post(`${API_URL}/settings/thresholds`, thresholds);
-            return response.data;
-        } catch (error) {
-            console.error('Error updating thresholds:', error);
-            throw error;
-        }
+  // Get all settings
+  getAllSettings: async () => {
+    try {
+      const response = await api.get('/v1/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting all settings:', error);
+      throw error;
     }
+  },
+  
+  // Get setting by id or type
+  getSetting: async (id) => {
+    try {
+      const response = await api.get(`/v1/settings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting setting ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Create or update a setting
+  upsertSetting: async (type, data) => {
+    try {
+      const response = await api.post('/v1/settings', { type, data });
+      return response.data;
+    } catch (error) {
+      console.error('Error upserting setting:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a setting
+  deleteSetting: async (id) => {
+    try {
+      const response = await api.delete(`/v1/settings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting setting ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Helper methods for prompt and thresholds for backward compatibility
+  getPrompt: async () => {
+    try {
+      const response = await api.get('/v1/settings/prompt');
+      return { data: response.data };
+    } catch (error) {
+      // If not found, return default values
+      if (error.response?.status === 404) {
+        return { data: { systemPrompt: '', userPrompt: '' } };
+      }
+      console.error('Error getting prompt:', error);
+      throw error;
+    }
+  },
+  
+  updatePrompt: async ({ systemPrompt, userPrompt }) => {
+    try {
+      const response = await api.upsertSetting('prompt', { systemPrompt, userPrompt });
+      return { data: response };
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      throw error;
+    }
+  },
+  
+  getThresholds: async () => {
+    try {
+      const response = await api.get('/v1/settings/threshold');
+      return { data: response.data };
+    } catch (error) {
+      // If not found, return default values
+      if (error.response?.status === 404) {
+        return { data: DEFAULT_THRESHOLDS };
+      }
+      console.error('Error getting thresholds:', error);
+      throw error;
+    }
+  },
+  
+  updateThresholds: async (thresholds) => {
+    try {
+      const response = await api.upsertSetting('threshold', thresholds);
+      return { data: response };
+    } catch (error) {
+      console.error('Error updating thresholds:', error);
+      throw error;
+    }
+  }
 };
