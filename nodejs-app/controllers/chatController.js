@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SensorData = require('../models/sensorData');
 const Device = require('../models/device');
-const Prompt = require('../models/prompt');
+const Setting = require('../models/setting');
 const ChatHistory = require('../models/chatHistory');
 require('dotenv').config();
 
@@ -122,7 +122,6 @@ const getSensorData = async () => {
 
       result += '\n' + '-'.repeat(30) + '\n';
     }
-    console.log(result)
     return result || 'Không có dữ liệu cảm biến nào để hiển thị.';
   } catch (error) {
     console.error('Error fetching sensor data:', error);
@@ -143,10 +142,10 @@ const generateResponse = async (userId, message) => {
     const sensorData = await getSensorData();
 
     // Get prompts from database
-    const prompt = await Prompt.findOne();
+    const prompt = await Setting.findOne({ type: 'prompt' });
     if (!prompt) {
       // Initialize prompts if not exists
-      await Prompt.initialize();
+      await Setting.create({ type: 'prompt', data: { systemPrompt: '', userPrompt: '' } });
       throw new Error('Đang khởi tạo prompt hệ thống, vui lòng thử lại sau');
     }
 
@@ -158,22 +157,16 @@ const generateResponse = async (userId, message) => {
         temperature: 0.7,
         topP: 0.9,
         topK: 40,
-      },
-      systemInstruction: prompt.systemPrompt
+      }
     });
-
+    console.log(prompt.data.user)
     // Combine sensor data context with user message using userPrompt template
     const combinedPrompt = `[Dữ liệu cảm biến 24h gần đây] ${sensorData}
-${prompt.userPrompt}
+${prompt.data.user}
 [Yêu cầu] ${message}`;
 
-    // Start chat with empty history and system instruction
-    const chat = model.startChat({
-      history: [
-        ...history,
-        { role: 'user', parts: [{ text: combinedPrompt }] }
-      ]
-    });
+    // Start chat with empty history
+    const chat = model.startChat();
 
     // Send the combined prompt as user message and get the response
     const result = await chat.sendMessage(combinedPrompt);

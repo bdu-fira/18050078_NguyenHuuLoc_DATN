@@ -31,7 +31,7 @@ export const PromptSetting = ({
         onFinish={onSave}
         layout="vertical"
       >
-        <Form.Item
+        {/* <Form.Item
           name="systemPrompt"
           label="System Prompt"
           rules={[{ required: true, message: 'Vui lòng nhập system prompt' }]}
@@ -41,11 +41,11 @@ export const PromptSetting = ({
             placeholder="Nhập system prompt..."
             disabled={loading && operation === 'updating'}
           />
-        </Form.Item>
+        </Form.Item> */}
 
         <Form.Item
           name="userPrompt"
-          label="User Prompt"
+          label="Prompt"
           rules={[{ required: true, message: 'Vui lòng nhập user prompt' }]}
         >
           <Input.TextArea
