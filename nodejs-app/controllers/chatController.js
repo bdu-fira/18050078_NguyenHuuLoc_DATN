@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SensorData = require('../models/sensorData');
 const Device = require('../models/device');
-const Setting = require('../models/setting');
+const Setting = require('../models/settings');
 const ChatHistory = require('../models/chatHistory');
 require('dotenv').config();
 
