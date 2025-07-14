@@ -10,6 +10,7 @@ import {
 import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
 import DeviceDetail from './pages/DeviceDetail';
+import Setting from './pages/Setting';
 import Chatbot from './components/Chatbot/Chatbot';
 
 const { Header, Footer, Sider, Content } = Layout;
@@ -74,6 +75,10 @@ const router = createBrowserRouter([
             element: <DeviceDetail />,
           }
         ]
+      },
+      {
+        path: "/setting",
+        element: <Setting />,
       }
     ],
   },

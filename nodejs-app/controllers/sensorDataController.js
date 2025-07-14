@@ -7,7 +7,7 @@ const SensorData = require('../models/sensorData');
  */
 const getSensorDataByTimeRange = async (req, res) => {
   try {
-    const { deviceId, hours = 24 } = req.query; // Lấy cả deviceId và hours từ query
+    const { deviceId, startDate, endDate, hours } = req.query;
     
     // Validate required fields
     if (!deviceId) {
@@ -16,28 +16,38 @@ const getSensorDataByTimeRange = async (req, res) => {
         message: 'Device ID is required'
       });
     }
+
+    // Build query conditions
+    const query = { deviceId };
     
-    // Validate hours is a positive number
-    const hoursNum = parseInt(hours);
-    if (isNaN(hoursNum) || hoursNum <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Hours must be a positive number'
-      });
+    // Handle date range or hours parameter
+    if (startDate && endDate) {
+      // Handle date range
+      const start = new Date(parseInt(startDate));
+      const end = new Date(parseInt(endDate));
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format. Please provide valid timestamps.'
+        });
+      }
+      
+      query.createdAt = { $gte: start, $lte: end };
+    } else if (hours) {
+      // Handle hours parameter (legacy support)
+      const hoursNum = parseInt(hours) || 24; // Default to 24 hours if invalid
+      const startDate = new Date();
+      startDate.setHours(startDate.getHours() - hoursNum);
+      
+      query.createdAt = { $gte: startDate };
     }
     
-    // Calculate the start date based on hours
-    const startDate = new Date();
-    startDate.setHours(startDate.getHours() - hoursNum);
-    
     // Query the database
-    const data = await SensorData.find({
-      deviceId: deviceId,
-      createdAt: { $gte: startDate }
-    })
-    .sort({ createdAt: 1 }) // Sort by createdAt in ascending order
-    .select('-__v -_id') // Exclude unnecessary fields
-    .lean();
+    const data = await SensorData.find(query)
+      .sort({ createdAt: 1 }) // Sort by createdAt in ascending order
+      .select('-__v -_id') // Exclude unnecessary fields
+      .lean();
 
     // Return empty array if no data found
     res.status(200).json({

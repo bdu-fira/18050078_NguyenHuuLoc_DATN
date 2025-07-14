@@ -95,12 +95,33 @@ export const deviceApi = {
 
 // Sensor Data APIs
 export const sensorDataApi = {
-  // Get sensor data by device ID and time range
-  getSensorData: async (deviceId, hours = 24) => {
+  // Get sensor data by device ID and time range or date range
+  getSensorData: async (deviceId, params = {}) => {
     try {
-      const response = await api.get('/sensor-data', {
-        params: { deviceId, hours }
+      // Handle both object params and legacy hours parameter
+      const queryParams = { deviceId };
+      
+      if (typeof params === 'number') {
+        // Legacy format: (deviceId, hours)
+        queryParams.hours = params;
+      } else if (params && typeof params === 'object') {
+        // New format with date range
+        if (params.startDate && params.endDate) {
+          // Use the timestamps directly as they're already in milliseconds
+          queryParams.startDate = params.startDate;
+          queryParams.endDate = params.endDate;
+        } else if (params.hours) {
+          queryParams.hours = params.hours;
+        }
+      }
+      
+      const response = await api.get('/sensor-data', { 
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null // Prevent array bracket notation in query params
+        }
       });
+      
       return response.data;
     } catch (error) {
       console.error(`Error fetching sensor data for device ${deviceId}:`, error);
@@ -146,4 +167,97 @@ export const chatApi = {
   }
 };
 
-export default api;
+export const settingsApi = {
+  // Get all settings
+  getAllSettings: async () => {
+    try {
+      const response = await api.get('/v1/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting all settings:', error);
+      throw error;
+    }
+  },
+  
+  // Get setting by id or type
+  getSetting: async (id) => {
+    try {
+      const response = await api.get(`/v1/settings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting setting ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Create or update a setting
+  upsertSetting: async (type, data) => {
+    try {
+      const response = await api.post('/v1/settings', { type, data });
+      return response.data;
+    } catch (error) {
+      console.error('Error upserting setting:', error);
+      throw error;
+    }
+  },
+  
+  // Delete a setting
+  deleteSetting: async (id) => {
+    try {
+      const response = await api.delete(`/v1/settings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting setting ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Helper methods for prompt and thresholds for backward compatibility
+  getPrompt: async () => {
+    try {
+      const response = await api.get('/v1/settings/prompt');
+      return { data: response.data };
+    } catch (error) {
+      // If not found, return default values
+      if (error.response?.status === 404) {
+        return { data: { systemPrompt: '', userPrompt: '' } };
+      }
+      console.error('Error getting prompt:', error);
+      throw error;
+    }
+  },
+  
+  updatePrompt: async ({ systemPrompt, userPrompt }) => {
+    try {
+      const response = await api.upsertSetting('prompt', { systemPrompt, userPrompt });
+      return { data: response };
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      throw error;
+    }
+  },
+  
+  getThresholds: async () => {
+    try {
+      const response = await api.get('/v1/settings/threshold');
+      return { data: response.data };
+    } catch (error) {
+      // If not found, return default values
+      if (error.response?.status === 404) {
+        return { data: DEFAULT_THRESHOLDS };
+      }
+      console.error('Error getting thresholds:', error);
+      throw error;
+    }
+  },
+  
+  updateThresholds: async (thresholds) => {
+    try {
+      const response = await api.upsertSetting('threshold', thresholds);
+      return { data: response };
+    } catch (error) {
+      console.error('Error updating thresholds:', error);
+      throw error;
+    }
+  }
+};

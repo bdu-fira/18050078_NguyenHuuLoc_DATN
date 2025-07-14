@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CountUp from 'react-countup';
-import moment from 'moment';
+import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isToday from 'dayjs/plugin/isToday';
+import 'dayjs/locale/vi';
+
+// Extend dayjs with plugins
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isToday);
+
 import {
   Card,
   Row,
@@ -16,6 +26,8 @@ import {
   Collapse,
   Switch,
   Divider,
+  DatePicker,
+  Modal,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -39,6 +51,7 @@ import SensorList from '../components/Device/SensorList';
 import DeviceFunctions from '../components/Device/DeviceFunctions';
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const categoryLabels = SENSOR_CATEGORIES;
 const sensorOptions = SENSOR_OPTIONS.map(sensor => ({
@@ -116,7 +129,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
         <p style={{ margin: '0 0 8px 0', color: '#666', fontWeight: 500 }}>
-          {moment(label).format('DD/MM/YYYY HH:mm:ss')}
+          {dayjs(label).format('DD/MM/YYYY HH:mm:ss')}
         </p>
         {payload.map((entry, index) => (
           <div key={`item-${index}`} style={{
@@ -148,8 +161,8 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
 
   // Format X-axis tick to show date and time using moment.js
   const formatXAxis = (tickItem) => {
-    const date = moment(tickItem);
-    const now = moment();
+    const date = dayjs(tickItem);
+    const now = dayjs();
 
     if (date.isSame(now, 'day')) {
       return date.format('HH:mm'); // Today - show time only
@@ -195,7 +208,7 @@ const ChartCard = ({ title, dataKey, color, unit, domain, children, data, avgVal
                 content={<CustomTooltip />}
                 wrapperStyle={{ zIndex: 100 }}
                 labelFormatter={(label) => {
-                  return `Thời gian: ${moment(label).format('DD/MM/YYYY HH:mm:ss')}`;
+                  return `Thời gian: ${dayjs(label).format('DD/MM/YYYY HH:mm:ss')}`;
                 }}
               />
               <Legend />
@@ -364,10 +377,14 @@ const DeviceDetail = () => {
   const [deviceFunctions, setDeviceFunctions] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(24);
+  const [dates, setDates] = useState(null);
+  const [dateRange, setDateRange] = useState(null);
+  const [useCustomDate, setUseCustomDate] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sensorAverages, setSensorAverages] = useState({});
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
 
   const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
@@ -384,6 +401,19 @@ const DeviceDetail = () => {
     }
   }, [device]);
 
+  const handleTimeRangeApply = () => {
+    fetchSensorsData();
+    setIsTimeModalVisible(false);
+  };
+
+  const handleTimeRangeCancel = () => {
+    setIsTimeModalVisible(false);
+  };
+
+  const handleOpenTimeModal = () => {
+    setIsTimeModalVisible(true);
+  };
+
   const fetchSensorsData = useCallback(async () => {
     if (!deviceId) return;
 
@@ -391,7 +421,18 @@ const DeviceDetail = () => {
       setLoading(true);
 
       // Fetch sensor data
-      const sensorResponse = await sensorDataApi.getSensorData(deviceId, timeRange);
+      let sensorResponse;
+      if (useCustomDate && dateRange?.[0] && dateRange?.[1]) {
+        // Convert to timestamps using dayjs
+        const start = dayjs(dateRange[0]).valueOf();
+        const end = dayjs(dateRange[1]).valueOf();
+        sensorResponse = await sensorDataApi.getSensorData(deviceId, {
+          startDate: start,
+          endDate: end
+        });
+      } else {
+        sensorResponse = await sensorDataApi.getSensorData(deviceId, timeRange);
+      }
 
       if (sensorResponse?.success) {
         const { data: formattedData, averages } = formatSensorData(sensorResponse.data);
@@ -407,7 +448,7 @@ const DeviceDetail = () => {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [deviceId, timeRange]);
+  }, [deviceId, timeRange, useCustomDate, dateRange]);
 
   // Handle refresh data
   const handleRefresh = () => {
@@ -544,22 +585,111 @@ const DeviceDetail = () => {
           </div>
 
           <Space size="middle">
-            <Space>
-              <ClockCircleOutlined />
-              <Text>Khoảng thời gian:</Text>
-              <Select
-                value={timeRange}
-                onChange={handleTimeRangeChange}
-                style={{ width: 120 }}
-                disabled={loading}
-              >
-                {TIME_RANGES.map(range => (
-                  <Select.Option key={range.value} value={range.value}>
-                    {range.label}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Space>
+            <Button 
+              type="text" 
+              icon={<ClockCircleOutlined />}
+              onClick={handleOpenTimeModal}
+            >
+              {useCustomDate 
+                ? dateRange?.[0] && dateRange?.[1] 
+                  ? `${dayjs(dateRange[0]).format('DD/MM/YYYY HH:mm')} - ${dayjs(dateRange[1]).format('DD/MM/YYYY HH:mm')}`
+                  : 'Chọn khoảng thời gian'
+                : `Tự động (${timeRange} giờ)`
+              }
+            </Button>
+
+            <Modal
+              title="Chọn khoảng thời gian"
+              open={isTimeModalVisible}
+              onOk={handleTimeRangeApply}
+              onCancel={handleTimeRangeCancel}
+              width={600}
+              okText="Áp dụng"
+              cancelText="Hủy"
+            >
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Space>
+                  <Text>Chế độ:</Text>
+                  <Switch
+                    checkedChildren="Tùy chỉnh"
+                    unCheckedChildren="Tự động"
+                    checked={useCustomDate}
+                    onChange={checked => {
+                      setUseCustomDate(checked);
+                      if (!checked) {
+                        setTimeRange(24);
+                      }
+                    }}
+                  />
+                </Space>
+
+                {useCustomDate ? (
+                  <RangePicker
+                    value={dateRange}
+                    showTime={{
+                      format: 'HH:mm',
+                      showNow: true
+                    }}
+                    format="DD/MM/YYYY HH:mm"
+                    onCalendarChange={(val) => setDates(val)}
+                    onChange={(val) => {
+                      if (val && val[0] && val[1]) {
+                        const start = dayjs(val[0]).startOf('minute');
+                        const end = dayjs(val[1]).startOf('minute');
+                        setDateRange([start, end]);
+                      } else {
+                        setDateRange([null, null]);
+                      }
+                      setDates(null);
+                    }}
+                    style={{ width: '100%' }}
+                    presets={[
+                      {
+                        label: 'Hôm nay',
+                        value: [dayjs().startOf('day'), dayjs().endOf('day')]
+                      },
+                      {
+                        label: 'Hôm qua',
+                        value: [
+                          dayjs().subtract(1, 'day').startOf('day'),
+                          dayjs().subtract(1, 'day').endOf('day')
+                        ]
+                      },
+                      {
+                        label: '7 ngày gần đây',
+                        value: [
+                          dayjs().subtract(6, 'day').startOf('day'),
+                          dayjs().endOf('day')
+                        ]
+                      },
+                      {
+                        label: '30 ngày gần đây',
+                        value: [
+                          dayjs().subtract(29, 'day').startOf('day'),
+                          dayjs().endOf('day')
+                        ]
+                      }
+                    ]}
+                  />
+                ) : (
+                  <Space>
+                    <Text>Khoảng thời gian:</Text>
+                    <Select
+                      value={timeRange}
+                      onChange={handleTimeRangeChange}
+                      style={{ width: 150 }}
+                      disabled={loading}
+                    >
+                      {TIME_RANGES.map(range => (
+                        <Select.Option key={range.value} value={range.value}>
+                          {range.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Space>
+                )}
+              </Space>
+            </Modal>
 
             <Button
               icon={<ReloadOutlined spin={isRefreshing} />}
