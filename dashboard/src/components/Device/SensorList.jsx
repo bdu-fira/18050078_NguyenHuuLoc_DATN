@@ -90,7 +90,7 @@ const SensorList = ({
                       </Space>
                     </div>
 
-                    <div style={{ width: '100%' }}>
+                    {/* <div style={{ width: '100%' }}>
                       <div style={{ fontSize: '12px', marginBottom: '4px', color: '#666' }}>Ngưỡng cảnh báo</div>
                       <InputNumber
                         size="small"
@@ -103,7 +103,7 @@ const SensorList = ({
                         value={selectedSensors[sensor.name] || 50}
                         onChange={(value) => onThresholdChange(sensor.name, value)}
                       />
-                    </div>
+                    </div> */}
                   </Card>
                 </div>
               </Col>

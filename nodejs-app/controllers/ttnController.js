@@ -13,12 +13,11 @@ const TTN_APP_ID = process.env.TTN_APP_ID;
  * @param {string} deviceId - Device ID (e.g., 'eui-70b3d17dd00653c8')
  * @param {Object} payload - The payload to send
  * @param {number} [fPort=1] - The port number (default: 1)
- * @param {boolean} [confirmed=false] - Whether the downlink requires confirmation
  * @returns {Promise<Object>} The response from TTN API
  */
-const sendDownlink = async (deviceId, payload, fPort = 1, confirmed = false) => {
+const sendDownlink = async (deviceId, payload, fPort = 1) => {
   try {
-    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/replace`;
+    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/push`;
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${TTN_API_KEY}`
@@ -27,7 +26,7 @@ const sendDownlink = async (deviceId, payload, fPort = 1, confirmed = false) => 
     const data = {
       downlinks: [{
         f_port: fPort,
-        confirmed: confirmed,
+        confirmed: true,
         decoded_payload: payload
       }]
     };
@@ -42,9 +41,9 @@ const sendDownlink = async (deviceId, payload, fPort = 1, confirmed = false) => 
 
 /**
  * Example controller function to turn on LED
- * @route POST /api/ttn/led-on
+ * @route POST /api/ttn
  */
-const handleLed = async (req, res) => {
+const handle = async (req, res) => {
   try {
     const { deviceId, cmd } = req.body;
     
@@ -56,23 +55,23 @@ const handleLed = async (req, res) => {
     }
 
     const payload = { cmd };
-    const result = await sendDownlink(deviceId, payload);
+    const result = await sendDownlink(deviceId, payload, 1);
     
     res.status(200).json({
       success: true,
-      message: 'LED on command sent successfully',
+      message: 'Command sent successfully',
       data: result
     });
   } catch (error) {
-    console.error('Error in handleLed:', error);
+    console.error('Error in handle:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to send LED on command'
+      message: error.message || 'Failed to send command'
     });
   }
 };
 
 module.exports = {
   sendDownlink,
-  handleLed
+  handle
 };

@@ -12,6 +12,10 @@ import Devices from './pages/Devices';
 import DeviceDetail from './pages/DeviceDetail';
 import Setting from './pages/Setting';
 import Chatbot from './components/Chatbot/Chatbot';
+import { useDispatch } from 'react-redux';
+import { fetchAllSettings } from './features/setting/settingsSlice';
+import { message, Spin } from 'antd';
+import { useEffect, useState } from 'react';
 
 const { Header, Footer, Sider, Content } = Layout;
 
@@ -85,15 +89,49 @@ const router = createBrowserRouter([
 ]);
 
 // Finally, define and export the App component
-const App = () => (
-  <>
-    <RouterProvider
-      future={{
-        v7_startTransition: true,
-      }}
-      router={router}
-    />
-    <Chatbot />
-  </>
-);
+const App = () => {
+  const dispatch = useDispatch();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        await dispatch(fetchAllSettings()).unwrap();
+      } catch (error) {
+        message.error('Không thể tải cài đặt: ' + (error.message || 'Lỗi không xác định'));
+      } finally {
+        setIsInitialLoad(false);
+      }
+    };
+
+    loadSettings();
+  }, [dispatch]);
+
+  if (isInitialLoad) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '50vh'
+      }}>
+        <Spin size="large">
+          <div style={{ padding: '24px' }}>Đang tải cài đặt...</div>
+        </Spin>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <RouterProvider
+        future={{
+          v7_startTransition: true,
+        }}
+        router={router}
+      />
+      <Chatbot />
+    </>
+  );
+};
 export default App;

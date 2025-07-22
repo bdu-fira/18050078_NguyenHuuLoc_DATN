@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Tabs, Input, Button, message, Spin } from 'antd';
+import React, { useState } from 'react';
+import { Tabs, message, Spin } from 'antd';
 import { SENSOR_OPTIONS } from '../constants/sensors';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchAllSettings, upsertSetting, updateSetting } from '../features/setting/settingsSlice';
+import { upsertSetting, updateSetting } from '../features/setting/settingsSlice';
 import { ThresholdSettings } from '../components/Setting/ThresholdSettings';
 import { PromptSetting } from '../components/Setting/PromptSetting';
 
@@ -12,27 +12,10 @@ const Setting = () => {
     prompt = { system: '', user: '' },
     thresholds = {},
     loading,
-    operation = 'fetching',
-    settingsByType = {}
+    operation = 'fetching'
   } = useSelector((state) => state.settings);
 
   const [activeTab, setActiveTab] = useState('prompt');
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  // Load all settings on component mount
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        await dispatch(fetchAllSettings()).unwrap();
-      } catch (error) {
-        message.error('Không thể tải cài đặt: ' + (error.message || 'Lỗi không xác định'));
-      } finally {
-        setIsInitialLoad(false);
-      }
-    };
-
-    loadSettings();
-  }, [dispatch]);
 
   // Handle tab change
   const handleTabChange = (key) => {
@@ -81,7 +64,7 @@ const Setting = () => {
     await saveSetting('threshold', values);
   };
 
-  if (isInitialLoad) {
+  if (loading) {
     return (
       <div style={{
         display: 'flex',

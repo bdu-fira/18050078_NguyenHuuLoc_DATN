@@ -108,6 +108,16 @@ async function processWebhookData(webhookData) {
         console.log('Processing join device event:', webhookData.payload);
         console.log(webhookData.payload)
         break;
+      case 'uplink_message':
+        // Handle uplink message event
+        console.log('Processing uplink message event:', webhookData.payload);
+        console.log(webhookData.payload)
+        break;
+      case 'downlink_message':
+        // Handle downlink message event
+        console.log('Processing downlink message event:', webhookData.payload);
+        console.log(webhookData.payload);
+        break;
       // Add more event types as needed
       default:
         console.log(`Processing ${webhookData.eventType} event`);

@@ -1,24 +1,8 @@
-/* Heltec Automation LoRaWAN communication example
- *
- * Function:
- * 1. Upload node data to the server using the standard LoRaWAN protocol.
- *  
- * Description:
- * 1. Communicate using LoRaWAN protocol.
- * 
- * HelTec AutoMation, Chengdu, China
- * 成都惠利特自动化科技有限公司
- * www.heltec.org
- *
- * */
-
 #include "LoRaWan_APP.h"
 #include "Wire.h"
-#include "GXHTC.h"
 #include <DHT.h>
 #include <ArduinoJson.h>
-
-GXHTC gxhtc;
+#include <ESP32Servo.h>
 
 /* OTAA para*/
 uint8_t devEui[] = { 0x70, 0xB3, 0xD1, 0x7D, 0xD0, 0x06, 0x53, 0xC8 };
@@ -37,16 +21,16 @@ uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 
 /*LoraWan Class, Class A and Class C are supported*/
-DeviceClass_t loraWanClass = CLASS_A;
+DeviceClass_t loraWanClass = CLASS_C;
 
 /*the application data transmission duty cycle.  value in [ms].*/
-uint32_t appTxDutyCycle = 15000;
+uint32_t appTxDutyCycle = 30000;
 
 /*OTAA or ABP*/
 bool overTheAirActivation = true;
 
 /*ADR enable*/
-bool loraWanAdr = true;
+bool loraWanAdr = false;
 
 /* Indicates if the node is sending confirmed or unconfirmed messages */
 bool isTxConfirmed = true;
@@ -95,47 +79,60 @@ void readDHTSensor() {
 // LED
 #define LED_ALARM_PIN 2
 bool ledState = false;
+int ledStatus = 0;
+
+// Servo
+const int servoPin = 3;
+const int homePosition = 90;
+Servo myservo;
+const int SERVO_DUTY_MIN = 400;   //min duty cycle in microseonds
+const int SERVO_DUTY_MAX = 2400;  //max duty cycle in microseonds
+int servoPosition = homePosition;
+int doorStatus = 0;
+
+// Buzzer
+#define BUZZER_PIN 4
+int alertStatus = 0;
 
 
 /* Prepares the payload of the frame */
 static void prepareTxFrame(uint8_t port) {
-  /*appData size is LORAWAN_APP_DATA_MAX_SIZE which is defined in "commissioning.h".
-  *appDataSize max value is LORAWAN_APP_DATA_MAX_SIZE.
-  *if enabled AT, don't modify LORAWAN_APP_DATA_MAX_SIZE, it may cause system hanging or failure.
-  *if disabled AT, LORAWAN_APP_DATA_MAX_SIZE can be modified, the max value is reference to lorawan region and SF.
-  *for example, if use REGION_CN470, 
-  *the max value for different DR can be found in MaxPayloadOfDatarateCN470 refer to DataratesCN470 and BandwidthsCN470 in "RegionCN470.h".
-  */
   readDHTSensor();
   delay(100);
   unsigned char *puc;
   appDataSize = 0;
+
+  // Header (nếu bạn cần giữ, hoặc bỏ nếu không cần)
   appData[appDataSize++] = 0x04;
   appData[appDataSize++] = 0x00;
   appData[appDataSize++] = 0x0A;
   appData[appDataSize++] = 0x02;
-  puc = (unsigned char *)(&temperature);
 
+  // Temperature (float -> 4 byte)
+  puc = (unsigned char *)(&temperature);
   appData[appDataSize++] = puc[0];
   appData[appDataSize++] = puc[1];
   appData[appDataSize++] = puc[2];
   appData[appDataSize++] = puc[3];
-  appData[appDataSize++] = 0x12;
 
+  // Humidity (float -> 4 byte)
   puc = (unsigned char *)(&humidity);
   appData[appDataSize++] = puc[0];
   appData[appDataSize++] = puc[1];
   appData[appDataSize++] = puc[2];
   appData[appDataSize++] = puc[3];
+
+  // doorStatus (1 byte)
+  appData[appDataSize++] = doorStatus;
+
+  // ledStatus (1 byte)
+  appData[appDataSize++] = ledStatus;
+
+  // alertStatus (1 byte, dùng trạng thái thực tế của còi)
+  appData[appDataSize++] = alertStatus;
 }
 
-//if true, next uplink will add MOTE_MAC_DEVICE_TIME_REQ
 
-
-//downlink data handle function
-// {
-//   "cmd": "led_on"
-// }
 void downLinkDataHandle(McpsIndication_t *mcpsIndication) {
   Serial.printf("+REV DATA:%s,RXSIZE %d,PORT %d\r\n",
                 mcpsIndication->RxSlot ? "RXWIN2" : "RXWIN1",
@@ -173,11 +170,11 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication) {
   }
 
   // ✅ Truy cập trường "cmd" trong "data"
-  const char *cmd = doc["data"]["cmd"];  
+  const char *cmd = doc["data"]["cmd"];
   if (cmd) {
     Serial.print("Command received: ");
     Serial.println(cmd);
-    handleCmdDownlink(cmd);  
+    handleCmdDownlink(cmd);
   } else {
     Serial.println("No 'cmd' field found in 'data'");
   }
@@ -190,12 +187,25 @@ void setup() {
   // Initialize the DHT sensor
   dht.begin();
   pinMode(LED_ALARM_PIN, OUTPUT);
-  digitalWrite(LED_ALARM_PIN, ledState ? HIGH : LOW);
 
+  //servo settings
+  ESP32PWM::allocateTimer(0);
+  myservo.setPeriodHertz(50);
+  myservo.attach(servoPin, SERVO_DUTY_MIN, SERVO_DUTY_MAX);
+
+  // Cấu hình các chân GPIO
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);  // Đảm bảo còi tắt khi khởi động
 }
 
 void loop() {
-   digitalWrite(LED_ALARM_PIN, ledState ? HIGH : LOW);
+  digitalWrite(LED_ALARM_PIN, ledState ? HIGH : LOW);
+  delay(10);
+  myservo.write(servoPosition);
+  delay(10);
+  digitalWrite(BUZZER_PIN, alertStatus == 1 ? HIGH : LOW);
+  delay(10);
+
   switch (deviceState) {
     case DEVICE_STATE_INIT:
       {
@@ -243,9 +253,19 @@ void loop() {
 void handleCmdDownlink(String cmd) {
   if (cmd == "led_on") {
     ledState = true;
-    digitalWrite(LED_ALARM_PIN, HIGH);
+    ledStatus = 1;
   } else if (cmd == "led_off") {
     ledState = false;
-    digitalWrite(LED_ALARM_PIN, LOW);
+    ledStatus = 0;
+  } else if (cmd == "door_open") {
+    servoPosition = 180;
+    doorStatus = 1;
+  } else if (cmd == "door_close") {
+    servoPosition = 90;
+    doorStatus = 0;
+  } else if (cmd == "alert_on") {
+    alertStatus = 1;
+  } else if (cmd == "alert_off") {
+    alertStatus = 0;
   }
 }

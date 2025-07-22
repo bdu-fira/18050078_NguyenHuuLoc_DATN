@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CountUp from 'react-countup';
-import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isToday from 'dayjs/plugin/isToday';
 import 'dayjs/locale/vi';
-
-// Extend dayjs with plugins
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.extend(isToday);
-
+import DeviceFunction from '../components/Device/DeviceFunction';
 import {
   Card,
   Row,
@@ -25,7 +19,6 @@ import {
   message,
   Collapse,
   Switch,
-  Divider,
   DatePicker,
   Modal,
 } from 'antd';
@@ -43,12 +36,17 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { deviceApi, sensorDataApi } from '../services/api';
+import { sensorDataApi } from '../services/api';
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../constants/sensors';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectAllDevices, updateDeviceById } from '../features/device/deviceSlice';
 import SensorList from '../components/Device/SensorList';
 import DeviceFunctions from '../components/Device/DeviceFunctions';
+import dayjs from 'dayjs';
+// Extend dayjs with plugins
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isToday);
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -377,7 +375,6 @@ const DeviceDetail = () => {
   const [deviceFunctions, setDeviceFunctions] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(24);
-  const [dates, setDates] = useState(null);
   const [dateRange, setDateRange] = useState(null);
   const [useCustomDate, setUseCustomDate] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -385,7 +382,11 @@ const DeviceDetail = () => {
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
-
+  const [isLedOn, setIsLedOn] = useState(false);
+  const [isAlertOn, setIsAlertOn] = useState(false);
+  const {
+    thresholds = {}
+  } = useSelector((state) => state.settings);
   const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
 
@@ -585,13 +586,13 @@ const DeviceDetail = () => {
           </div>
 
           <Space size="middle">
-            <Button 
-              type="text" 
+            <Button
+              type="text"
               icon={<ClockCircleOutlined />}
               onClick={handleOpenTimeModal}
             >
-              {useCustomDate 
-                ? dateRange?.[0] && dateRange?.[1] 
+              {useCustomDate
+                ? dateRange?.[0] && dateRange?.[1]
                   ? `${dayjs(dateRange[0]).format('DD/MM/YYYY HH:mm')} - ${dayjs(dateRange[1]).format('DD/MM/YYYY HH:mm')}`
                   : 'Chọn khoảng thời gian'
                 : `Tự động (${timeRange} giờ)`
@@ -631,7 +632,6 @@ const DeviceDetail = () => {
                       showNow: true
                     }}
                     format="DD/MM/YYYY HH:mm"
-                    onCalendarChange={(val) => setDates(val)}
                     onChange={(val) => {
                       if (val && val[0] && val[1]) {
                         const start = dayjs(val[0]).startOf('minute');
@@ -640,7 +640,6 @@ const DeviceDetail = () => {
                       } else {
                         setDateRange([null, null]);
                       }
-                      setDates(null);
                     }}
                     style={{ width: '100%' }}
                     presets={[
@@ -713,37 +712,15 @@ const DeviceDetail = () => {
             children: (
               <div>
                 {
-                  deviceFunctions.length > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
-                      <Space>
-                        <Text>Bật đèn LED</Text>
-                        <Switch
-                          checked={deviceFunctions[0].state === 'on'}
-                          onChange={(checked) => {
-                            const updatedFunctions = [...deviceFunctions];
-                            updatedFunctions[0] = {
-                              ...deviceFunctions[0],
-                              state: checked ? 'on' : 'off'
-                            };
-                            setDeviceFunctions(updatedFunctions);
-                            // TODO: Add API call to update device state
-                          }}
-                          checkedChildren="Bật"
-                          unCheckedChildren="Tắt"
-                          style={{
-                            backgroundColor: deviceFunctions[0].state === 'on' ? '#52c41a' : '#f5222d',
-                            minWidth: '80px'
-                          }}
-                        />
-                      </Space>
-                    </div>
+                  device.deviceId == 'eui-70b3d17dd00653c8' && (
+                    <DeviceFunction deviceId={device.deviceId} />
                   )
                 }
                 <Row gutter={[24, 24]}>
                   {device?.sensors && Object.entries(device.sensors).map(([sensorKey, threshold]) => {
                     const config = chartConfigs[sensorKey];
                     if (!config) return null;
-
+                    const sensorThreshold = thresholds[sensorKey] || threshold;
                     return (
                       <Col key={sensorKey} xs={24} md={12} lg={8}>
                         <ChartCard
@@ -751,10 +728,10 @@ const DeviceDetail = () => {
                           dataKey={config.dataKey}
                           color={config.color}
                           unit={config.unit}
-                          domain={[0, threshold * 1.5]}
+                          domain={[0, sensorThreshold * 1.5]}
                           data={sensorData}
                           avgValue={sensorAverages[sensorKey]}
-                          threshold={threshold}
+                          threshold={sensorThreshold}
                         >
                           <Line
                             type="monotone"
@@ -769,7 +746,7 @@ const DeviceDetail = () => {
                           {/* Threshold line */}
                           <Line
                             type="monotone"
-                            dataKey={() => threshold}
+                            dataKey={sensorThreshold}
                             name="Ngưỡng cảnh báo"
                             stroke="#faad14"
                             strokeDasharray="5 5"

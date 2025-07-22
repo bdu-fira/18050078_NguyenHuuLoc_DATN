@@ -261,3 +261,16 @@ export const settingsApi = {
     }
   }
 };
+
+export const ttnApi = {
+  appId: "huuloc-datotnghiep-0",
+  sendDownlink: async (deviceId, cmd, confirmed = true) => {
+    try {
+      const response = await api.post('/ttn', { deviceId, cmd, appId: ttnApi.appId, confirmed });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending downlink:', error);
+      throw error;
+    }
+  },
+};
