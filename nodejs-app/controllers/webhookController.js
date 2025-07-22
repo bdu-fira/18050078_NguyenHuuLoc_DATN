@@ -1,5 +1,7 @@
 const WebhookData = require('../models/webhookData');
 const SensorData = require('../models/sensorData');
+const UplinkMessage = require('../models/uplinkMessage');
+const DownlinkMessage = require('../models/downlinkMessage');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -111,12 +113,77 @@ async function processWebhookData(webhookData) {
       case 'uplink_message':
         // Handle uplink message event
         console.log('Processing uplink message event:', webhookData.payload);
-        console.log(webhookData.payload)
+        {
+          const { end_device_ids, uplink_message, received_at } = webhookData.payload;
+          const deviceId = end_device_ids?.device_id;
+          
+          if (!deviceId) {
+            console.error('Missing device ID in uplink message');
+            break;
+          }
+          
+          // Create new uplink message document
+          const uplinkDoc = new UplinkMessage({
+            deviceId,
+            timestamp: new Date(received_at || Date.now()),
+            data: uplink_message,
+            rawData: webhookData.payload
+          });
+          
+          await uplinkDoc.save();
+          console.log(`Uplink message saved for device: ${deviceId}`);
+        }
         break;
       case 'downlink_message':
         // Handle downlink message event
         console.log('Processing downlink message event:', webhookData.payload);
-        console.log(webhookData.payload);
+        {
+          const { downlink_queued, end_device_ids } = webhookData.payload;
+          const deviceId = end_device_ids?.device_id;
+          
+          if (!deviceId) {
+            console.error('Missing device ID in downlink message');
+            break;
+          }
+          
+          // Extract command and parameters from the downlink message
+          const frmPayload = downlink_queued?.frm_payload || '';
+          let command = 'unknown';
+          let parameters = {};
+          
+          try {
+            // Try to parse the payload if it's in a known format
+            if (frmPayload) {
+              const payloadStr = Buffer.from(frmPayload, 'base64').toString('utf-8');
+              try {
+                const payloadData = JSON.parse(payloadStr);
+                command = payloadData.cmd || 'unknown';
+                parameters = { ...payloadData };
+                delete parameters.cmd; // Remove cmd from parameters
+              } catch (e) {
+                // If not JSON, use raw payload as command
+                command = 'raw_payload';
+                parameters = { payload: payloadStr };
+              }
+            }
+            
+            // Create new downlink message document
+            const downlinkDoc = new DownlinkMessage({
+              deviceId,
+              timestamp: new Date(downlink_queued?.received_at || Date.now()),
+              command,
+              parameters,
+              status: 'pending',
+              sentAt: new Date(downlink_queued?.settings?.timestamp || Date.now()),
+              rawData: webhookData.payload
+            });
+            
+            await downlinkDoc.save();
+            console.log(`Downlink message saved for device: ${deviceId}, command: ${command}`);
+          } catch (error) {
+            console.error('Error processing downlink message:', error);
+          }
+        }
         break;
       // Add more event types as needed
       default:
