@@ -9,6 +9,7 @@ const sensorDataRoutes = require('./routes/sensorDataRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const settingsRoutes = require('./routes/settings');
 const settingRoutes = require('./routes/settingRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/api/sensor-data', sensorDataRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/v1/settings', settingRoutes);
+app.use('/api/message', messageRoutes);
 
 // Webhooks
 app.post(

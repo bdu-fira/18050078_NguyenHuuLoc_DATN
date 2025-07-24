@@ -134,54 +134,68 @@ async function processWebhookData(webhookData) {
           console.log(`Uplink message saved for device: ${deviceId}`);
         }
         break;
-      case 'downlink_message':
-        // Handle downlink message event
-        console.log('Processing downlink message event:', webhookData.payload);
+      case 'downlink_ack':
+        // Handle downlink acknowledgment event
+        console.log('Processing downlink acknowledgment event:', webhookData.payload);
         {
-          const { downlink_queued, end_device_ids } = webhookData.payload;
+          const { end_device_ids, downlink_ack } = webhookData.payload;
           const deviceId = end_device_ids?.device_id;
           
           if (!deviceId) {
-            console.error('Missing device ID in downlink message');
+            console.error('Missing device ID in downlink acknowledgment');
             break;
           }
           
           // Extract command and parameters from the downlink message
-          const frmPayload = downlink_queued?.frm_payload || '';
           let command = 'unknown';
           let parameters = {};
+          const decodedPayload = downlink_ack?.decoded_payload;
           
           try {
-            // Try to parse the payload if it's in a known format
-            if (frmPayload) {
-              const payloadStr = Buffer.from(frmPayload, 'base64').toString('utf-8');
+            // Check if we have a decoded payload with command
+            if (decodedPayload?.data?.cmd) {
+              command = decodedPayload.data.cmd;
+              parameters = { ...decodedPayload.data };
+              delete parameters.cmd; // Remove cmd from parameters
+            } 
+            // If no decoded payload, try to decode from frm_payload
+            else if (downlink_ack?.frm_payload) {
               try {
+                const payloadStr = Buffer.from(downlink_ack.frm_payload, 'base64').toString('utf-8');
                 const payloadData = JSON.parse(payloadStr);
-                command = payloadData.cmd || 'unknown';
-                parameters = { ...payloadData };
-                delete parameters.cmd; // Remove cmd from parameters
+                if (payloadData.data?.cmd) {
+                  command = payloadData.data.cmd;
+                  parameters = { ...payloadData.data };
+                  delete parameters.cmd;
+                }
               } catch (e) {
-                // If not JSON, use raw payload as command
-                command = 'raw_payload';
-                parameters = { payload: payloadStr };
+                console.log('Could not parse frm_payload:', e.message);
               }
             }
             
-            // Create new downlink message document
+            // Get correlation IDs for tracking
+            const correlationIds = downlink_ack?.correlation_ids || [];
+            
+            // Create new downlink message document with acknowledgment details
             const downlinkDoc = new DownlinkMessage({
               deviceId,
-              timestamp: new Date(downlink_queued?.received_at || Date.now()),
+              timestamp: new Date(),
               command,
               parameters,
-              status: 'pending',
-              sentAt: new Date(downlink_queued?.settings?.timestamp || Date.now()),
+              status: 'delivered', // Since this is an acknowledgment
+              fPort: downlink_ack?.f_port,
+              fCnt: downlink_ack?.f_cnt,
+              confirmed: downlink_ack?.confirmed || false,
+              correlationIds,
+              sentAt: new Date(),
+              deliveredAt: new Date(),
               rawData: webhookData.payload
             });
             
             await downlinkDoc.save();
-            console.log(`Downlink message saved for device: ${deviceId}, command: ${command}`);
+            console.log(`Downlink acknowledgment saved for device: ${deviceId}, command: ${command}`);
           } catch (error) {
-            console.error('Error processing downlink message:', error);
+            console.error('Error processing downlink acknowledgment:', error);
           }
         }
         break;

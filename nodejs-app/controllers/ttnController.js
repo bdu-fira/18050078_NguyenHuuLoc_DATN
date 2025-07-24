@@ -17,7 +17,7 @@ const TTN_APP_ID = process.env.TTN_APP_ID;
  */
 const sendDownlink = async (deviceId, payload, fPort = 1) => {
   try {
-    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/push`;
+    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/replace`;
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${TTN_API_KEY}`
