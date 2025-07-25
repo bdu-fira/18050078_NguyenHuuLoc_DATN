@@ -21,6 +21,9 @@ import {
   Switch,
   DatePicker,
   Modal,
+  Statistic,
+  Spin,
+  Divider,
 } from 'antd';
 import {
   ClockCircleOutlined,
@@ -36,7 +39,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { sensorDataApi } from '../services/api';
+import { sensorDataApi, messageApi } from '../services/api';
 import { SENSOR_OPTIONS, SENSOR_CATEGORIES } from '../constants/sensors';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectAllDevices, updateDeviceById } from '../features/device/deviceSlice';
@@ -367,6 +370,10 @@ const calculateAverage = (arr, key) => {
 };
 
 const DeviceDetail = () => {
+  const [signalMetrics, setSignalMetrics] = useState(null);
+  const [signalMetricsLoading, setSignalMetricsLoading] = useState(false);
+  const [signalMetricsType, setSignalMetricsType] = useState('uplink');
+  const [signalMetricsDateRange, setSignalMetricsDateRange] = useState([]);
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const devices = useSelector(selectAllDevices);
@@ -382,13 +389,38 @@ const DeviceDetail = () => {
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
-  const [isLedOn, setIsLedOn] = useState(false);
-  const [isAlertOn, setIsAlertOn] = useState(false);
   const {
     thresholds = {}
   } = useSelector((state) => state.settings);
   const device = devices.find(device => device.deviceId === deviceId) || {};
   const dispatch = useDispatch();
+
+  const fetchSignalMetrics = useCallback(async () => {
+    if (!deviceId) return;
+
+    setSignalMetricsLoading(true);
+    try {
+      const [start, end] = signalMetricsDateRange;
+      if (!start || !end) {
+        message.error('Vui lòng chọn khoảng thời gian');
+        return;
+      }
+
+      const metrics = await messageApi.getSignalMetrics(
+        deviceId,
+        signalMetricsType,
+        start.valueOf(),
+        end.valueOf()
+      );
+      setSignalMetrics(metrics);
+      message.success('Đã tải dữ liệu tín hiệu thành công');
+    } catch (error) {
+      message.error('Lỗi khi tải dữ liệu tín hiệu');
+      console.error('Error fetching signal metrics:', error);
+    } finally {
+      setSignalMetricsLoading(false);
+    }
+  }, [deviceId, signalMetricsDateRange, signalMetricsType]);
 
   // Initialize device data when component mounts or device changes
   useEffect(() => {
@@ -585,120 +617,7 @@ const DeviceDetail = () => {
             )}
           </div>
 
-          <Space size="middle">
-            <Button
-              type="text"
-              icon={<ClockCircleOutlined />}
-              onClick={handleOpenTimeModal}
-            >
-              {useCustomDate
-                ? dateRange?.[0] && dateRange?.[1]
-                  ? `${dayjs(dateRange[0]).format('DD/MM/YYYY HH:mm')} - ${dayjs(dateRange[1]).format('DD/MM/YYYY HH:mm')}`
-                  : 'Chọn khoảng thời gian'
-                : `Tự động (${timeRange} giờ)`
-              }
-            </Button>
 
-            <Modal
-              title="Chọn khoảng thời gian"
-              open={isTimeModalVisible}
-              onOk={handleTimeRangeApply}
-              onCancel={handleTimeRangeCancel}
-              width={600}
-              okText="Áp dụng"
-              cancelText="Hủy"
-            >
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                <Space>
-                  <Text>Chế độ:</Text>
-                  <Switch
-                    checkedChildren="Tùy chỉnh"
-                    unCheckedChildren="Tự động"
-                    checked={useCustomDate}
-                    onChange={checked => {
-                      setUseCustomDate(checked);
-                      if (!checked) {
-                        setTimeRange(24);
-                      }
-                    }}
-                  />
-                </Space>
-
-                {useCustomDate ? (
-                  <RangePicker
-                    value={dateRange}
-                    showTime={{
-                      format: 'HH:mm',
-                      showNow: true
-                    }}
-                    format="DD/MM/YYYY HH:mm"
-                    onChange={(val) => {
-                      if (val && val[0] && val[1]) {
-                        const start = dayjs(val[0]).startOf('minute');
-                        const end = dayjs(val[1]).startOf('minute');
-                        setDateRange([start, end]);
-                      } else {
-                        setDateRange([null, null]);
-                      }
-                    }}
-                    style={{ width: '100%' }}
-                    presets={[
-                      {
-                        label: 'Hôm nay',
-                        value: [dayjs().startOf('day'), dayjs().endOf('day')]
-                      },
-                      {
-                        label: 'Hôm qua',
-                        value: [
-                          dayjs().subtract(1, 'day').startOf('day'),
-                          dayjs().subtract(1, 'day').endOf('day')
-                        ]
-                      },
-                      {
-                        label: '7 ngày gần đây',
-                        value: [
-                          dayjs().subtract(6, 'day').startOf('day'),
-                          dayjs().endOf('day')
-                        ]
-                      },
-                      {
-                        label: '30 ngày gần đây',
-                        value: [
-                          dayjs().subtract(29, 'day').startOf('day'),
-                          dayjs().endOf('day')
-                        ]
-                      }
-                    ]}
-                  />
-                ) : (
-                  <Space>
-                    <Text>Khoảng thời gian:</Text>
-                    <Select
-                      value={timeRange}
-                      onChange={handleTimeRangeChange}
-                      style={{ width: 150 }}
-                      disabled={loading}
-                    >
-                      {TIME_RANGES.map(range => (
-                        <Select.Option key={range.value} value={range.value}>
-                          {range.label}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Space>
-                )}
-              </Space>
-            </Modal>
-
-            <Button
-              icon={<ReloadOutlined spin={isRefreshing} />}
-              onClick={handleRefresh}
-              loading={isRefreshing}
-              disabled={isRefreshing}
-            >
-              Làm mới
-            </Button>
-          </Space>
         </div>
       </div>
 
@@ -716,6 +635,121 @@ const DeviceDetail = () => {
                     <DeviceFunction deviceId={device.deviceId} />
                   )
                 }
+                <Space size="middle">
+                  <Button
+                    type="text"
+                    icon={<ClockCircleOutlined />}
+                    onClick={handleOpenTimeModal}
+                  >
+                    {useCustomDate
+                      ? dateRange?.[0] && dateRange?.[1]
+                        ? `${dayjs(dateRange[0]).format('DD/MM/YYYY HH:mm')} - ${dayjs(dateRange[1]).format('DD/MM/YYYY HH:mm')}`
+                        : 'Chọn khoảng thời gian'
+                      : `Tự động (${timeRange} giờ)`
+                    }
+                  </Button>
+
+                  <Modal
+                    title="Chọn khoảng thời gian"
+                    open={isTimeModalVisible}
+                    onOk={handleTimeRangeApply}
+                    onCancel={handleTimeRangeCancel}
+                    width={600}
+                    okText="Áp dụng"
+                    cancelText="Hủy"
+                  >
+                    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                      <Space>
+                        <Text>Chế độ:</Text>
+                        <Switch
+                          checkedChildren="Tùy chỉnh"
+                          unCheckedChildren="Tự động"
+                          checked={useCustomDate}
+                          onChange={checked => {
+                            setUseCustomDate(checked);
+                            if (!checked) {
+                              setTimeRange(24);
+                            }
+                          }}
+                        />
+                      </Space>
+
+                      {useCustomDate ? (
+                        <RangePicker
+                          value={dateRange}
+                          showTime={{
+                            format: 'HH:mm',
+                            showNow: true
+                          }}
+                          format="DD/MM/YYYY HH:mm"
+                          onChange={(val) => {
+                            if (val && val[0] && val[1]) {
+                              const start = dayjs(val[0]).startOf('minute');
+                              const end = dayjs(val[1]).startOf('minute');
+                              setDateRange([start, end]);
+                            } else {
+                              setDateRange([null, null]);
+                            }
+                          }}
+                          style={{ width: '100%' }}
+                          presets={[
+                            {
+                              label: 'Hôm nay',
+                              value: [dayjs().startOf('day'), dayjs().endOf('day')]
+                            },
+                            {
+                              label: 'Hôm qua',
+                              value: [
+                                dayjs().subtract(1, 'day').startOf('day'),
+                                dayjs().subtract(1, 'day').endOf('day')
+                              ]
+                            },
+                            {
+                              label: '7 ngày gần đây',
+                              value: [
+                                dayjs().subtract(6, 'day').startOf('day'),
+                                dayjs().endOf('day')
+                              ]
+                            },
+                            {
+                              label: '30 ngày gần đây',
+                              value: [
+                                dayjs().subtract(29, 'day').startOf('day'),
+                                dayjs().endOf('day')
+                              ]
+                            }
+                          ]}
+                        />
+                      ) : (
+                        <Space>
+                          <Text>Khoảng thời gian:</Text>
+                          <Select
+                            value={timeRange}
+                            onChange={handleTimeRangeChange}
+                            style={{ width: 150 }}
+                            disabled={loading}
+                          >
+                            {TIME_RANGES.map(range => (
+                              <Select.Option key={range.value} value={range.value}>
+                                {range.label}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Space>
+                      )}
+                    </Space>
+                  </Modal>
+
+                  <Button
+                    icon={<ReloadOutlined spin={isRefreshing} />}
+                    onClick={handleRefresh}
+                    loading={isRefreshing}
+                    disabled={isRefreshing}
+                  >
+                    Làm mới
+                  </Button>
+                </Space>
+                <Divider />
                 <Row gutter={[24, 24]}>
                   {device?.sensors && Object.entries(device.sensors).map(([sensorKey, threshold]) => {
                     const config = chartConfigs[sensorKey];
@@ -801,6 +835,114 @@ const DeviceDetail = () => {
                     Lưu thay đổi
                   </Button>
                 </div>
+              </Card>
+            )
+          },
+          {
+            key: 'signal-metrics',
+            label: 'Chất lượng tín hiệu',
+            children: (
+              <Card style={{ marginTop: 16, minHeight: 0, maxHeight: '100%', minWidth: 0, maxWidth: '100%' }}>
+                <Row gutter={[16, 16]}>
+                  <Col span={24}>
+                    <Space style={{ marginBottom: 16 }}>
+                      <Select
+                        value={signalMetricsType}
+                        onChange={setSignalMetricsType}
+                        style={{ width: 120 }}
+                      >
+                        <Option value="uplink">Uplink</Option>
+                        <Option value="downlink">Downlink</Option>
+                      </Select>
+                      <RangePicker
+                        value={signalMetricsDateRange}
+                        showTime={{
+                          format: 'HH:mm',
+                          showNow: true
+                        }}
+                        format="DD/MM/YYYY HH:mm"
+                        onChange={(val) => {
+                          if (val && val[0] && val[1]) {
+                            const start = dayjs(val[0]).startOf('minute');
+                            const end = dayjs(val[1]).startOf('minute');
+                            setSignalMetricsDateRange([start, end]);
+                          } else {
+                            setSignalMetricsDateRange([null, null]);
+                          }
+                        }}
+                        style={{ width: '100%' }}
+                        presets={[
+                          {
+                            label: 'Hôm nay',
+                            value: [dayjs().startOf('day'), dayjs().endOf('day')]
+                          },
+                          {
+                            label: 'Hôm qua',
+                            value: [
+                              dayjs().subtract(1, 'day').startOf('day'),
+                              dayjs().subtract(1, 'day').endOf('day')
+                            ]
+                          },
+                          {
+                            label: '7 ngày gần đây',
+                            value: [
+                              dayjs().subtract(6, 'day').startOf('day'),
+                              dayjs().endOf('day')
+                            ]
+                          },
+                          {
+                            label: '30 ngày gần đây',
+                            value: [
+                              dayjs().subtract(29, 'day').startOf('day'),
+                              dayjs().endOf('day')
+                            ]
+                          }
+                        ]}
+                      />
+                      <Button
+                        type="primary"
+                        onClick={fetchSignalMetrics}
+                        loading={signalMetricsLoading}
+                        icon={<ReloadOutlined />}
+                      >
+                        Tải lại
+                      </Button>
+                    </Space>
+                  </Col>
+                  <Col span={24}>
+                    {signalMetricsLoading ? (
+                      <Spin size="large" />
+                    ) : signalMetrics ? (
+                      <Row gutter={[16, 16]}>
+                        {Object.entries(signalMetrics.metrics).map(([key, value]) => (
+                          key != "count" && <Col key={key} xs={24} sm={12} md={8}>
+                            <Card title={key.replace(/([A-Z])/g, ' $1').trim()}>
+                              <Statistic
+                                title="Trung bình"
+                                value={value.average}
+                                precision={2}
+                              />
+                              <Statistic
+                                title="Số lượng"
+                                value={value.count}
+                              />
+                              {/* {key === 'confirmed' && (
+                                <Statistic
+                                  title="Tỉ lệ thành công"
+                                  value={value.percentage}
+                                  precision={2}
+                                  suffix="%"
+                                />
+                              )} */}
+                            </Card>
+                          </Col>
+                        ))}
+                      </Row>
+                    ) : (
+                      <Empty description="Chưa có dữ liệu tín hiệu" />
+                    )}
+                  </Col>
+                </Row>
               </Card>
             )
           }

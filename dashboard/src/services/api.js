@@ -94,6 +94,26 @@ export const deviceApi = {
 };
 
 // Sensor Data APIs
+export const messageApi = {
+  // Get signal metrics for device
+  getSignalMetrics: async (deviceId, type, startDate, endDate) => {
+    try {
+      const response = await api.get('/message/signal-metrics', {
+        params: {
+          deviceId,
+          type,
+          startDate,
+          endDate
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching signal metrics:', error);
+      throw error;
+    }
+  }
+};
+
 export const sensorDataApi = {
   // Get sensor data by device ID and time range or date range
   getSensorData: async (deviceId, params = {}) => {
