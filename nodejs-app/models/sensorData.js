@@ -6,6 +6,11 @@ const sensorDataSchema = new mongoose.Schema({
     required: false,
     index: true
   },
+  sensorType: {
+    type: String,
+    enum: ['temperature', 'humidity', 'co2', 'pm25'],
+    required: false
+  },
   // Sensor data fields
   ADC_CH0V: {
     type: Number,
