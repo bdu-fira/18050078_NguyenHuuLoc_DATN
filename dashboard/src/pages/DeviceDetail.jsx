@@ -23,10 +23,12 @@ import {
   Modal,
   Statistic,
   Spin,
+  Tooltip,
   Divider,
 } from 'antd';
 import {
   ClockCircleOutlined,
+  QuestionCircleOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
 import {
@@ -35,7 +37,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
   ResponsiveContainer
 } from 'recharts';
@@ -360,6 +361,17 @@ const chartConfigs = {
     domain: [0, 5]
   }
 };
+
+const tooltipContents = {
+  rssi: "RSSI (dBm): Cường độ tín hiệu thu được tại gateway. Giá trị càng gần 0 thì tín hiệu càng mạnh (thông thường từ -120 dBm đến -30 dBm).",
+  snr: "SNR (dB): Tỷ lệ giữa tín hiệu và nhiễu. Giá trị dương cho thấy tín hiệu mạnh hơn nhiễu, giá trị âm nghĩa là tín hiệu đang chìm trong nhiễu.",
+  packetErrorRate: "PER (%): Tỷ lệ gói tin bị lỗi hoặc mất trên tổng số gói gửi. Giá trị càng thấp thì kết nối càng ổn định.",
+  airtime: "Airtime (s): Thời gian mà một gói LoRa chiếm kênh truyền khi phát. Phụ thuộc vào kích thước gói, tốc độ dữ liệu (SF) và băng thông.",
+  correlationIds: "Correlation IDs: Số lượng ID liên kết được gán cho một gói tin khi nó đi qua hệ thống (ví dụ: gateway, network server, application server). Dùng để truy vết và gỡ lỗi trong toàn bộ chuỗi xử lý dữ liệu.",
+  retryAttempts: "Retry Attempts: Số lần hệ thống phải thử gửi lại một gói tin (uplink hoặc downlink) do lỗi truyền hoặc mất gói. Giá trị cao có thể cho thấy chất lượng mạng kém hoặc nhiều xung đột kênh.",
+  confirmed: "Confirmed: Tỷ lệ xác nhận nhận tin nhắn."
+}
+
 
 // Helper function to calculate average of an array of numbers
 const calculateAverage = (arr, key) => {
@@ -916,7 +928,25 @@ const DeviceDetail = () => {
                       <Row gutter={[16, 16]}>
                         {Object.entries(signalMetrics.metrics).map(([key, value]) => (
                           key != "count" && <Col key={key} xs={24} sm={12} md={8}>
-                            <Card title={key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}>
+                            <Card title={
+                              <Space>
+                                {key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
+                                <Tooltip
+                                  title={
+                                    key === 'rssi' ? tooltipContents.rssi :
+                                      key === 'snr' ? tooltipContents.snr :
+                                        key === 'packetErrorRate' ? tooltipContents.packetErrorRate :
+                                          key === 'airtime' ? tooltipContents.airtime :
+                                            key === 'correlationIds' ? tooltipContents.correlationIds :
+                                              key === 'retryAttempts' ? tooltipContents.retryAttempts :
+                                                key === 'confirmed' ? tooltipContents.confirmed :
+                                                  'Thông tin chỉ số'
+                                  }
+                                >
+                                  <QuestionCircleOutlined style={{ color: '#8c8c8c', cursor: 'help' }} />
+                                </Tooltip>
+                              </Space>
+                            }>
                               <Statistic
                                 title={key === 'packetErrorRate' ? 'Tỷ lệ lỗi' : "Trung bình"}
                                 value={key === 'packetErrorRate' ? value.average * 100 : value.average}
