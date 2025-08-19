@@ -916,15 +916,23 @@ const DeviceDetail = () => {
                       <Row gutter={[16, 16]}>
                         {Object.entries(signalMetrics.metrics).map(([key, value]) => (
                           key != "count" && <Col key={key} xs={24} sm={12} md={8}>
-                            <Card title={key.replace(/([A-Z])/g, ' $1').trim()}>
+                            <Card title={key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}>
                               <Statistic
-                                title="Trung bình"
-                                value={value.average}
+                                title={key === 'packetErrorRate' ? 'Tỷ lệ lỗi' : "Trung bình"}
+                                value={key === 'packetErrorRate' ? value.average * 100 : value.average}
                                 precision={2}
+                                suffix={key === 'rssi' ? ' dBm'
+                                  : key === 'snr' ? ' dB'
+                                    : key === 'packetErrorRate' ? ' %'
+                                      : key === 'airtime' ? ' s'
+                                        : key === 'correlationIds' ? ' lần'
+                                          : key === 'retryAttempts' ? ' lần'
+                                            : key === 'confirmed' ? '%'
+                                              : ''}
                               />
                               <Statistic
                                 title="Số lượng"
-                                value={value.count}
+                                value={value.values?.length}
                               />
                               {/* {key === 'confirmed' && (
                                 <Statistic

@@ -9,7 +9,7 @@ const DownlinkMessage = require('../models/downlinkMessage');
 const getMessagesByTimeRange = async (req, res) => {
   try {
     const { deviceId, type, startDate, endDate } = req.query;
-    
+
     if (!deviceId) return res.status(400).json({ success: false, message: 'Device ID is required' });
     if (!type || !['uplink', 'downlink'].includes(type)) return res.status(400).json({ success: false, message: 'Type must be either "uplink" or "downlink"' });
     if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'startDate and endDate are required' });
@@ -45,7 +45,7 @@ const getMessagesByTimeRange = async (req, res) => {
 const getSignalMetrics = async (req, res) => {
   try {
     const { deviceId, startDate, endDate, type } = req.query;
-    
+
     if (!deviceId) return res.status(400).json({ success: false, message: 'Device ID is required' });
     if (!startDate || !endDate) return res.status(400).json({ success: false, message: 'startDate and endDate are required' });
     if (!type || !['uplink', 'downlink'].includes(type)) {
@@ -56,137 +56,119 @@ const getSignalMetrics = async (req, res) => {
     const end = new Date(parseInt(endDate));
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return res.status(400).json({ success: false, message: 'Invalid date format' });
 
-    const query = {
-      deviceId,
-      timestamp: { $gte: start, $lte: end }
-    };
+    const query = { deviceId, timestamp: { $gte: start, $lte: end } };
 
-    // Get messages based on type
     let signals;
     if (type === 'uplink') {
       signals = await UplinkMessage.find(query)
         .select('data.rx_metadata data.packet_error_rate data.consumed_airtime data.confirmed')
         .lean();
-    } else if (type === 'downlink') {
+    } else {
       signals = await DownlinkMessage.find(query)
         .select('rawData.downlink_ack.correlation_ids rawData.downlink_ack.confirmed_retry rawData.downlink_ack.confirmed')
         .lean();
     }
 
-    // If no messages found, return empty metrics
     if (!signals || !Array.isArray(signals) || signals.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'No messages found for the specified time range and device ID' 
+      return res.status(404).json({
+        success: false,
+        message: 'No messages found for the specified time range and device ID'
       });
     }
-    console.log("signals", signals);
 
-    // Initialize metrics
+    const calcMedian = arr => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+
     const metrics = type === 'uplink' ? {
-      rssi: { count: 0, sum: 0, average: 0 },
-      snr: { count: 0, sum: 0, average: 0 },
-      packetErrorRate: { count: 0, sum: 0, average: 0 },
-      airtime: { count: 0, sum: 0, average: 0 },
-      confirmed: { count: 0, total: 0, percentage: 0 },
+      rssi: { values: [], average: 0, median: 0 },
+      snr: { values: [], average: 0, median: 0 },
+      packetErrorRate: { values: [], average: 0, median: 0 },
+      airtime: { values: [], average: 0, median: 0 },
+      // confirmed: { total: 0, percentage: 0 },
       count: 0
     } : {
-      correlationIds: { count: 0, total: 0, average: 0 },
-      retryAttempts: { count: 0, sum: 0, average: 0 },
-      confirmed: { count: 0, total: 0, percentage: 0 },
+      correlationIds: { values: [], average: 0, median: 0 },
+      retryAttempts: { values: [], average: 0, median: 0 },
+      confirmed: { total: 0, percentage: 0 },
       count: 0
     };
 
-    // Process messages
     signals.forEach(msg => {
+      metrics.count++;
+
       if (type === 'uplink') {
-        metrics.count++;
-        
-        // Process RSSI and SNR from all gateways
         if (msg.data?.rx_metadata) {
           msg.data.rx_metadata.forEach(gateway => {
-            if (gateway.rssi !== undefined) {
-              metrics.rssi.count++;
-              metrics.rssi.sum += gateway.rssi;
-            }
-            if (gateway.snr !== undefined) {
-              metrics.snr.count++;
-              metrics.snr.sum += gateway.snr;
-            }
+            if (gateway.rssi !== undefined) metrics.rssi.values.push(gateway.rssi);
+            if (gateway.snr !== undefined) metrics.snr.values.push(gateway.snr);
           });
         }
 
-        // Process packet error rate
         if (msg.data?.packet_error_rate !== undefined) {
-          metrics.packetErrorRate.count++;
-          metrics.packetErrorRate.sum += msg.data.packet_error_rate;
+          metrics.packetErrorRate.values.push(msg.data.packet_error_rate);
         }
 
-        // Process airtime
         if (msg.data?.consumed_airtime) {
           const match = msg.data.consumed_airtime.match(/(\d+\.?\d*)s/);
-          if (match) {
-            const airtimeSeconds = parseFloat(match[1]);
-            metrics.airtime.count++;
-            metrics.airtime.sum += airtimeSeconds;
-          }
+          if (match) metrics.airtime.values.push(parseFloat(match[1]));
         }
 
-        // Process confirmed status
-        metrics.confirmed.count++;
-        metrics.confirmed.total += msg.data?.confirmed ? 1 : 0;
-      } else { // downlink
-        metrics.count++;
-        
-        // Process correlation IDs
+        // if (msg.data?.confirmed) metrics.confirmed.total++;
+      } else {
         if (msg.rawData?.downlink_ack?.correlation_ids) {
-          metrics.correlationIds.count++;
-          metrics.correlationIds.total += msg.rawData.downlink_ack.correlation_ids.length;
+          metrics.correlationIds.values.push(msg.rawData.downlink_ack.correlation_ids.length);
         }
-
-        // Process retry attempts
         if (msg.rawData?.downlink_ack?.confirmed_retry?.attempt) {
-          metrics.retryAttempts.count++;
-          metrics.retryAttempts.sum += msg.rawData.downlink_ack.confirmed_retry.attempt;
+          metrics.retryAttempts.values.push(msg.rawData.downlink_ack.confirmed_retry.attempt);
         }
-
-        // Process confirmed status
-        metrics.confirmed.count++;
-        metrics.confirmed.total += msg.rawData?.downlink_ack?.confirmed ? 1 : 0;
+        if (msg.rawData?.downlink_ack?.confirmed) metrics.confirmed.total++;
       }
     });
 
-    // Calculate averages
+    // Tính trung bình và trung vị
     if (type === 'uplink') {
-      if (metrics.rssi.count > 0) metrics.rssi.average = metrics.rssi.sum / metrics.rssi.count;
-      if (metrics.snr.count > 0) metrics.snr.average = metrics.snr.sum / metrics.snr.count;
-      if (metrics.packetErrorRate.count > 0) metrics.packetErrorRate.average = metrics.packetErrorRate.sum / metrics.packetErrorRate.count;
-      if (metrics.airtime.count > 0) metrics.airtime.average = metrics.airtime.sum / metrics.airtime.count;
-      if (metrics.confirmed.count > 0) metrics.confirmed.percentage = (metrics.confirmed.total / metrics.confirmed.count) * 100;
-    } else { // downlink
-      if (metrics.correlationIds.count > 0) metrics.correlationIds.average = metrics.correlationIds.total / metrics.correlationIds.count;
-      if (metrics.retryAttempts.count > 0) metrics.retryAttempts.average = metrics.retryAttempts.sum / metrics.retryAttempts.count;
-      if (metrics.confirmed.count > 0) metrics.confirmed.percentage = (metrics.confirmed.total / metrics.confirmed.count) * 100;
+      if (metrics.rssi.values.length > 0) {
+        metrics.rssi.average = metrics.rssi.values.reduce((a, b) => a + b, 0) / metrics.rssi.values.length;
+        metrics.rssi.median = calcMedian(metrics.rssi.values);
+      }
+      if (metrics.snr.values.length > 0) {
+        metrics.snr.average = metrics.snr.values.reduce((a, b) => a + b, 0) / metrics.snr.values.length;
+        metrics.snr.median = calcMedian(metrics.snr.values);
+      }
+      if (metrics.packetErrorRate.values.length > 0) {
+        metrics.packetErrorRate.average = metrics.packetErrorRate.values.reduce((a, b) => a + b, 0) / metrics.packetErrorRate.values.length;
+        metrics.packetErrorRate.median = calcMedian(metrics.packetErrorRate.values);
+      }
+      if (metrics.airtime.values.length > 0) {
+        metrics.airtime.average = metrics.airtime.values.reduce((a, b) => a + b, 0) / metrics.airtime.values.length;
+        metrics.airtime.median = calcMedian(metrics.airtime.values);
+      }
+      // if (metrics.count > 0) metrics.confirmed.percentage = (metrics.confirmed.total / metrics.count) * 100;
+    } else {
+      if (metrics.correlationIds.values.length > 0) {
+        metrics.correlationIds.average = metrics.correlationIds.values.reduce((a, b) => a + b, 0) / metrics.correlationIds.values.length;
+        metrics.correlationIds.median = calcMedian(metrics.correlationIds.values);
+      }
+      if (metrics.retryAttempts.values.length > 0) {
+        metrics.retryAttempts.average = metrics.retryAttempts.values.reduce((a, b) => a + b, 0) / metrics.retryAttempts.values.length;
+        metrics.retryAttempts.median = calcMedian(metrics.retryAttempts.values);
+      }
+      if (metrics.count > 0) metrics.confirmed.percentage = (metrics.confirmed.total / metrics.count) * 100;
     }
 
-    // Prepare response
-    const responseMetrics = {
-      count: metrics.count,
-      ...metrics
-    };
-
-    res.json({ success: true, metrics: responseMetrics });
-
+    res.json({ success: true, metrics });
   } catch (error) {
-    console.error('Error calculating signal metrics:', {
-      error: error.message,
-      stack: error.stack,
-      query: { deviceId, startDate, endDate, type }
-    });
-    res.status(500).json({ 
-      success: false, 
+    console.error('Error calculating signal metrics:', error);
+    res.status(500).json({
+      success: false,
       message: 'Error calculating signal metrics',
-      error: error.message 
+      error: error.message
     });
   }
 };
