@@ -29,7 +29,8 @@ const getMessagesByTimeRange = async (req, res) => {
       .select('-__v -_id')
       .lean();
 
-    res.status(200).json({ success: true, count: messages.length, data: messages });
+    const data = messages.map(message => (message?.data?.rx_metadata?.[0]));
+    res.status(200).json({ success: true, count: messages.length, data });
 
   } catch (error) {
     console.error('Error fetching messages:', error);
