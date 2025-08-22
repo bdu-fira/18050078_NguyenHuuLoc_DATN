@@ -25,6 +25,8 @@ import {
   Spin,
   Tooltip,
   Divider,
+  Dropdown,
+  Menu
 } from 'antd';
 import {
   AreaChartOutlined,
@@ -32,11 +34,14 @@ import {
   QuestionCircleOutlined,
   ReloadOutlined,
   CloseOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  MoreOutlined
 } from '@ant-design/icons';
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -56,6 +61,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isToday);
 
 const { Title, Text } = Typography;
+const { TabPane } = Tabs;
 const { RangePicker } = DatePicker;
 
 const categoryLabels = SENSOR_CATEGORIES;
@@ -395,7 +401,6 @@ const DeviceDetail = () => {
   const [loading, setLoading] = useState(true);
   const [sensorData, setSensorData] = useState([]);
   const [deviceFunctions, setDeviceFunctions] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState(24);
   const [dateRange, setDateRange] = useState(null);
   const [useCustomDate, setUseCustomDate] = useState(false);
@@ -404,9 +409,9 @@ const DeviceDetail = () => {
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [isModalMessagesOpen, setIsModalMessagesOpen] = useState(false);
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [chartData, setChartData] = useState([]);
 
   const exportToCSV = async () => {
     try {
@@ -515,44 +520,67 @@ const DeviceDetail = () => {
     }
   }, [deviceId, signalMetricsDateRange, signalMetricsType]);
 
-  const fetchMessageByTimeRange = useCallback(async () => {
-    if (!deviceId) return;
+  const fetchMessages = useCallback(async (start, end, type) => {
+    if (!deviceId) return [];
 
-    setMessagesLoading(true);
     try {
-      const [start, end] = signalMetricsDateRange;
-      if (!start || !end) {
-        message.error('Vui lòng chọn khoảng thời gian');
-        return;
-      }
-
       const messages = await messageApi.getMessagesByTimeRange(
         deviceId,
-        signalMetricsType,
+        type || signalMetricsType,
         start.valueOf(),
         end.valueOf()
       );
-      setMessages(messages);
-      message.success('Đã tải dữ liệu tín hiệu thành công');
+      return Array.isArray(messages.data) ? messages.data : [];
     } catch (error) {
-      message.error('Lỗi khi tải dữ liệu tín hiệu');
-      console.error('Error fetching signal metrics:', error);
+      console.error('Error fetching messages:', error);
+      return [];
+    }
+  }, [deviceId, signalMetricsType]);
+
+  const showChartModal = async () => {
+    const [start, end] = signalMetricsDateRange;
+    if (!start || !end) {
+      message.error('Vui lòng chọn khoảng thời gian');
+      return;
+    }
+
+    setMessagesLoading(true);
+    try {
+      const chartMessages = await fetchMessages(start, end);
+
+      if (chartMessages.length === 0) {
+        message.warning('Không có dữ liệu để hiển thị biểu đồ');
+        return;
+      }
+
+      // Process data for the chart
+      const processedData = chartMessages.map(msg => ({
+        time: new Date(msg.received_at).toLocaleString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }),
+        rssi: msg.rssi,
+        channelRssi: msg.channel_rssi,
+        snr: msg.snr
+      }));
+
+      setChartData(processedData);
+      setIsChartModalOpen(true);
+    } catch (error) {
+      message.error('Lỗi khi tải dữ liệu biểu đồ');
+      console.error('Error loading chart data:', error);
     } finally {
       setMessagesLoading(false);
     }
-  }, [deviceId, signalMetricsDateRange, signalMetricsType]);
-
-  const showModalMessages = () => {
-    setIsModalMessagesOpen(true);
-    fetchMessageByTimeRange();
   };
 
-  const handleOkMessages = () => {
-    setIsModalMessagesOpen(false);
-  };
-
-  const handleCancelMessages = () => {
-    setIsModalMessagesOpen(false);
+  const handleCancelChartModal = () => {
+    setIsChartModalOpen(false);
   };
 
   // Initialize device data when component mounts or device changes
@@ -749,14 +777,11 @@ const DeviceDetail = () => {
               </div>
             )}
           </div>
-
-
         </div>
       </div>
 
       <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
+        defaultActiveKey="overview"
         items={[
           {
             key: 'overview',
@@ -1046,8 +1071,18 @@ const DeviceDetail = () => {
                         icon={<DownloadOutlined />}
                         loading={messagesLoading}
                         disabled={messagesLoading}
+                        style={{ marginRight: 8 }}
                       >
                         Xuất CSV
+                      </Button>
+                      <Button
+                        type="primary"
+                        onClick={showChartModal}
+                        icon={<AreaChartOutlined />}
+                        loading={messagesLoading}
+                        disabled={messagesLoading}
+                      >
+                        Xem biểu đồ
                       </Button>
                     </Space>
                   </Col>
@@ -1108,6 +1143,47 @@ const DeviceDetail = () => {
           }
         ]}
       />
+
+      <Modal
+        title="Biểu đồ tín hiệu"
+        open={isChartModalOpen}
+        onCancel={handleCancelChartModal}
+        width={1000}
+        footer={[
+          <Button key="close" onClick={handleCancelChartModal}>
+            Đóng
+          </Button>
+        ]}
+      >
+        <div style={{ height: 500 }}>
+          <Tabs defaultActiveKey="rssi">
+            <TabPane tab="RSSI" key="rssi">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" style={{ fontSize: 10 }} />
+                  <YAxis label={{ value: 'dBm', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="rssi" name="RSSI" fill="#1890ff" />
+                </BarChart>
+              </ResponsiveContainer>
+            </TabPane>
+            <TabPane tab="SNR" key="snr">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" style={{ fontSize: 10 }} />
+                  <YAxis label={{ value: 'dB', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="snr" name="SNR" fill="#722ed1" />
+                </BarChart>
+              </ResponsiveContainer>
+            </TabPane>
+          </Tabs>
+        </div>
+      </Modal>
     </div>
   );
 };
