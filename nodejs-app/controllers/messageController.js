@@ -29,7 +29,10 @@ const getMessagesByTimeRange = async (req, res) => {
       .select('-__v -_id')
       .lean();
 
-    const data = messages.map(message => ({...message?.data?.rx_metadata?.[0], consumed_airtime: message?.rawData?.uplink_message?.consumed_airtime}));
+    const data = messages.map(message => {
+      const consumed_airtime = parseFloat(message?.rawData?.uplink_message?.consumed_airtime?.replace('s', ''));
+      return {...message?.data?.rx_metadata?.[0], consumed_airtime}
+    });
     res.status(200).json({ success: true, count: messages.length, data });
 
   } catch (error) {

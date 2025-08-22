@@ -411,7 +411,7 @@ const DeviceDetail = () => {
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState({ data: [], averages: { rssi: 0, snr: 0, consumed_airtime: 0 } });
 
   const exportToCSV = async () => {
     try {
@@ -444,7 +444,8 @@ const DeviceDetail = () => {
         'Channel RSSI (dBm)',
         'SNR (dB)',
         'Kênh',
-        'Thời gian nhận'
+        'Thời gian nhận',
+        'Airtime (s)'
       ];
 
       // Convert messages to CSV rows with proper formatting
@@ -552,7 +553,7 @@ const DeviceDetail = () => {
         message.warning('Không có dữ liệu để hiển thị biểu đồ');
         return;
       }
-
+      console.log(chartMessages)
       // Process data for the chart
       const processedData = chartMessages.map(msg => ({
         time: new Date(msg.received_at).toLocaleString('vi-VN', {
@@ -566,10 +567,23 @@ const DeviceDetail = () => {
         }),
         rssi: msg.rssi,
         channelRssi: msg.channel_rssi,
-        snr: msg.snr
+        snr: msg.snr,
+        consumed_airtime: msg.consumed_airtime
       }));
+      console.log(processedData)
+      // Calculate averages
+      const rssiAvg = processedData.reduce((sum, item) => sum + item.rssi, 0) / processedData.length;
+      const snrAvg = processedData.reduce((sum, item) => sum + item.snr, 0) / processedData.length;
+      const consumed_airtimeAvg = processedData.reduce((sum, item) => sum + item.consumed_airtime, 0) / processedData.length;
 
-      setChartData(processedData);
+      setChartData({
+        data: processedData,
+        averages: {
+          rssi: rssiAvg,
+          snr: snrAvg,
+          consumed_airtime: consumed_airtimeAvg
+        }
+      });
       setIsChartModalOpen(true);
     } catch (error) {
       message.error('Lỗi khi tải dữ liệu biểu đồ');
@@ -1159,7 +1173,7 @@ const DeviceDetail = () => {
           <Tabs defaultActiveKey="rssi">
             <TabPane tab="RSSI" key="rssi">
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={chartData}>
+                <BarChart data={chartData.data || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" style={{ fontSize: 10 }} />
                   <YAxis label={{ value: 'dBm', angle: -90, position: 'insideLeft' }} />
@@ -1167,11 +1181,14 @@ const DeviceDetail = () => {
                   <Legend />
                   <Bar dataKey="rssi" name="RSSI" fill="#1890ff" />
                 </BarChart>
+                <div style={{ textAlign: 'center', marginTop: 10 }}>
+                  <Text strong>Trung bình: {chartData.averages?.rssi?.toFixed(2)} dBm</Text>
+                </div>
               </ResponsiveContainer>
             </TabPane>
             <TabPane tab="SNR" key="snr">
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={chartData}>
+                <BarChart data={chartData.data || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" style={{ fontSize: 10 }} />
                   <YAxis label={{ value: 'dB', angle: -90, position: 'insideLeft' }} />
@@ -1179,6 +1196,25 @@ const DeviceDetail = () => {
                   <Legend />
                   <Bar dataKey="snr" name="SNR" fill="#722ed1" />
                 </BarChart>
+                <div style={{ textAlign: 'center', marginTop: 10 }}>
+                  <Text strong>Trung bình: {chartData.averages?.snr?.toFixed(2)} dB</Text>
+                </div>
+              </ResponsiveContainer>
+            </TabPane>
+
+            <TabPane tab="Airtime" key="consumed_airtime">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={chartData.data || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" style={{ fontSize: 10 }} />
+                  <YAxis label={{ value: 's', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="consumed_airtime" name="Airtime" fill="#d1752e" />
+                </BarChart>
+                <div style={{ textAlign: 'center', marginTop: 10 }}>
+                  <Text strong>Trung bình: {chartData.averages?.consumed_airtime?.toFixed(2)} s</Text>
+                </div>
               </ResponsiveContainer>
             </TabPane>
           </Tabs>
