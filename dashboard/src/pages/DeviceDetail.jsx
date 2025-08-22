@@ -1213,7 +1213,7 @@ const DeviceDetail = () => {
                   <Bar dataKey="consumed_airtime" name="Airtime" fill="#d1752e" />
                 </BarChart>
                 <div style={{ textAlign: 'center', marginTop: 10 }}>
-                  <Text strong>Trung bình: {chartData.averages?.consumed_airtime?.toFixed(2)} s</Text>
+                  <Text strong>Trung bình: {chartData.averages?.consumed_airtime} s</Text>
                 </div>
               </ResponsiveContainer>
             </TabPane>
