@@ -111,7 +111,23 @@ export const messageApi = {
       console.error('Error fetching signal metrics:', error);
       throw error;
     }
-  }
+  },
+  getMessagesByTimeRange: async (deviceId, type, startDate, endDate) => {
+    try {
+      const response = await api.get('/message/messages', {
+        params: {
+          deviceId,
+          type,
+          startDate,
+          endDate
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching messages by time range:', error);
+      throw error;
+    }
+  },
 };
 
 export const sensorDataApi = {

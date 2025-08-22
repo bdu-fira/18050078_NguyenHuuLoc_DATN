@@ -27,9 +27,12 @@ import {
   Divider,
 } from 'antd';
 import {
+  AreaChartOutlined,
   ClockCircleOutlined,
   QuestionCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  CloseOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import {
   LineChart,
@@ -401,6 +404,84 @@ const DeviceDetail = () => {
   const [selectedSensors, setSelectedSensors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isTimeModalVisible, setIsTimeModalVisible] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [isModalMessagesOpen, setIsModalMessagesOpen] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+
+  const exportToCSV = async () => {
+    try {
+      setMessagesLoading(true);
+
+      // Fetch fresh data before exporting
+      const [start, end] = signalMetricsDateRange;
+      if (!start || !end) {
+        message.error('Vui lòng chọn khoảng thời gian');
+        return;
+      }
+
+      const { data: freshMessages } = await messageApi.getMessagesByTimeRange(
+        deviceId,
+        signalMetricsType,
+        start.valueOf(),
+        end.valueOf()
+      );
+
+      if (!freshMessages || freshMessages.length === 0) {
+        message.warning('Không có dữ liệu để xuất');
+        return;
+      }
+
+      // Define CSV headers
+      const headers = [
+        'Thời gian',
+        'Gateway ID',
+        'RSSI (dBm)',
+        'Channel RSSI (dBm)',
+        'SNR (dB)',
+        'Kênh',
+        'Thời gian nhận'
+      ];
+
+      // Convert messages to CSV rows with proper formatting
+      const csvRows = freshMessages.map(msg => ({
+        // Ensure proper CSV escaping for Excel
+        time: `"${(msg.time || '').replace(/"/g, '""')}"`,
+        gatewayId: `"${(msg.gateway_ids?.gateway_id || '').replace(/"/g, '""')}"`,
+        rssi: msg.rssi ?? '',
+        channelRssi: msg.channel_rssi ?? '',
+        snr: msg.snr ?? '',
+        channel: msg.channel_index ?? '',
+        receivedAt: `"${(msg.received_at || '').replace(/"/g, '""')}"`
+      }));
+
+      // Create CSV content with proper Excel formatting
+      const csvContent = [
+        headers.join(';'),  // Use semicolon as delimiter for better Excel compatibility
+        ...csvRows.map(row => Object.values(row).join(';'))
+      ].join('\r\n');  // Use Windows line endings for Excel
+
+      // Create download link with BOM for UTF-8
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], {
+        type: 'text/csv;charset=utf-8;'
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      link.setAttribute('download', `signal_data_${timestamp}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('Lỗi khi xuất dữ liệu');
+      console.error('Export error:', error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
   const {
     thresholds = {}
   } = useSelector((state) => state.settings);
@@ -433,6 +514,46 @@ const DeviceDetail = () => {
       setSignalMetricsLoading(false);
     }
   }, [deviceId, signalMetricsDateRange, signalMetricsType]);
+
+  const fetchMessageByTimeRange = useCallback(async () => {
+    if (!deviceId) return;
+
+    setMessagesLoading(true);
+    try {
+      const [start, end] = signalMetricsDateRange;
+      if (!start || !end) {
+        message.error('Vui lòng chọn khoảng thời gian');
+        return;
+      }
+
+      const messages = await messageApi.getMessagesByTimeRange(
+        deviceId,
+        signalMetricsType,
+        start.valueOf(),
+        end.valueOf()
+      );
+      setMessages(messages);
+      message.success('Đã tải dữ liệu tín hiệu thành công');
+    } catch (error) {
+      message.error('Lỗi khi tải dữ liệu tín hiệu');
+      console.error('Error fetching signal metrics:', error);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [deviceId, signalMetricsDateRange, signalMetricsType]);
+
+  const showModalMessages = () => {
+    setIsModalMessagesOpen(true);
+    fetchMessageByTimeRange();
+  };
+
+  const handleOkMessages = () => {
+    setIsModalMessagesOpen(false);
+  };
+
+  const handleCancelMessages = () => {
+    setIsModalMessagesOpen(false);
+  };
 
   // Initialize device data when component mounts or device changes
   useEffect(() => {
@@ -919,6 +1040,15 @@ const DeviceDetail = () => {
                       >
                         Tải lại
                       </Button>
+                      <Button
+                        type="primary"
+                        onClick={exportToCSV}
+                        icon={<DownloadOutlined />}
+                        loading={messagesLoading}
+                        disabled={messagesLoading}
+                      >
+                        Xuất CSV
+                      </Button>
                     </Space>
                   </Col>
                   <Col span={24}>
@@ -964,14 +1094,6 @@ const DeviceDetail = () => {
                                 title="Số lượng"
                                 value={value.values?.length}
                               />
-                              {/* {key === 'confirmed' && (
-                                <Statistic
-                                  title="Tỉ lệ thành công"
-                                  value={value.percentage}
-                                  precision={2}
-                                  suffix="%"
-                                />
-                              )} */}
                             </Card>
                           </Col>
                         ))}
