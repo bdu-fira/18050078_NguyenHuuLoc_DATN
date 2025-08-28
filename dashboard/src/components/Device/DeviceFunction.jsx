@@ -62,7 +62,7 @@ const DeviceFunction = ({ deviceId, alertState = false, ledState = false, doorSt
         icon={doorState ? <WindowsFilled /> : <WindowsOutlined />}
         onClick={toggleDoor}
       >
-        {doorState ? 'Đóng cửa' : 'Mở cửa'}
+        {doorState ? 'Tắt Servo' : 'Bật Servo'}
       </Button>
     </div>
   );
