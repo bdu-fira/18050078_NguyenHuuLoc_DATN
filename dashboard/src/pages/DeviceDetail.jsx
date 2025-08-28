@@ -54,6 +54,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectAllDevices, updateDeviceById } from '../features/device/deviceSlice';
 import SensorList from '../components/Device/SensorList';
 import DeviceFunctions from '../components/Device/DeviceFunctions';
+import ReactJson from 'react-json-view'
 import dayjs from 'dayjs';
 // Extend dayjs with plugins
 dayjs.extend(isSameOrBefore);
@@ -804,7 +805,12 @@ const DeviceDetail = () => {
               <div>
                 {
                   device.deviceId == 'eui-70b3d17dd00653c8' && (
-                    <DeviceFunction deviceId={device.deviceId} />
+                    <DeviceFunction
+                      deviceId={device.deviceId}
+                      alertState={sensorData?.[sensorData?.length - 1]?.Alert_State}
+                      ledState={sensorData?.[sensorData?.length - 1]?.LED_State}
+                      doorState={sensorData?.[sensorData?.length - 1]?.Door_State}
+                    />
                   )
                 }
                 <Space size="middle">
@@ -976,8 +982,8 @@ const DeviceDetail = () => {
             key: 'data',
             label: 'Dữ liệu thô',
             children: (
-              <Card style={{ marginTop: 16, overflow: 'auto', minHeight: 0, maxHeight: '400px', minWidth: 0, maxWidth: '100%' }}>
-                <pre>{JSON.stringify(sensorData, null, 2)}</pre>
+              <Card style={{ marginTop: 16, overflow: 'auto', minHeight: 0, minWidth: 0, height: '600px', textAlign: 'left' }}>
+                <ReactJson src={sensorData} />
               </Card>
             )
           },

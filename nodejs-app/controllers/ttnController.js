@@ -15,9 +15,9 @@ const TTN_APP_ID = process.env.TTN_APP_ID;
  * @param {number} [fPort=1] - The port number (default: 1)
  * @returns {Promise<Object>} The response from TTN API
  */
-const sendDownlink = async (deviceId, payload, fPort = 1) => {
+const sendDownlink = async (deviceId, payload, fPort = 2, type = 'replace') => {
   try {
-    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/replace`;
+    const url = `${TTN_API_URL}/as/applications/${TTN_APP_ID}/devices/${deviceId}/down/${type}`;
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${TTN_API_KEY}`
@@ -45,7 +45,7 @@ const sendDownlink = async (deviceId, payload, fPort = 1) => {
  */
 const handle = async (req, res) => {
   try {
-    const { deviceId, cmd } = req.body;
+    const { deviceId, cmd, type = 'replace' } = req.body;
     
     if (!deviceId) {
       return res.status(400).json({ 
@@ -55,7 +55,7 @@ const handle = async (req, res) => {
     }
 
     const payload = { cmd };
-    const result = await sendDownlink(deviceId, payload, 1);
+    const result = await sendDownlink(deviceId, payload, 2, type);
     
     res.status(200).json({
       success: true,

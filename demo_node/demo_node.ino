@@ -24,7 +24,7 @@ LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t loraWanClass = CLASS_C;
 
 /*the application data transmission duty cycle.  value in [ms].*/
-uint32_t appTxDutyCycle = 30000;
+uint32_t appTxDutyCycle = 15000;
 
 /*OTAA or ABP*/
 bool overTheAirActivation = true;
