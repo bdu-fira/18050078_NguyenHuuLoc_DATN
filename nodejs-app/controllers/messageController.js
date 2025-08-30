@@ -146,7 +146,8 @@ const getSignalMetrics = async (req, res) => {
         metrics.snr.median = calcMedian(metrics.snr.values);
       }
       if (metrics.packetErrorRate.values.length > 0) {
-        metrics.packetErrorRate.average = metrics.packetErrorRate.values.reduce((a, b) => a + b, 0) / metrics.packetErrorRate.values.length;
+        // metrics.packetErrorRate.average = metrics.packetErrorRate.values.reduce((a, b) => a + b, 0) / metrics.packetErrorRate.values.length;
+        metrics.packetErrorRate.average = metrics.packetErrorRate.values.length/metrics.count;
         metrics.packetErrorRate.median = calcMedian(metrics.packetErrorRate.values);
       }
       if (metrics.airtime.values.length > 0) {
