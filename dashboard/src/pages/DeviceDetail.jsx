@@ -1028,6 +1028,7 @@ const DeviceDetail = () => {
                         value={signalMetricsType}
                         onChange={setSignalMetricsType}
                         style={{ width: 120 }}
+                        disabled={true}
                       >
                         <Option value="uplink">Uplink</Option>
                         <Option value="downlink">Downlink</Option>

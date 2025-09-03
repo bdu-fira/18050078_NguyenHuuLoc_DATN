@@ -15,7 +15,7 @@ const Setting = () => {
     operation = 'fetching'
   } = useSelector((state) => state.settings);
 
-  const [activeTab, setActiveTab] = useState('prompt');
+  const [activeTab, setActiveTab] = useState('thresholds');
 
   // Handle tab change
   const handleTabChange = (key) => {
@@ -81,18 +81,6 @@ const Setting = () => {
 
   const items = [
     {
-      key: 'prompt',
-      label: 'Cài đặt Prompt',
-      children: (
-        <PromptSetting
-          loading={loading}
-          operation={operation}
-          initialValues={prompt}
-          onSave={handleSavePrompt}
-        />
-      ),
-    },
-    {
       key: 'thresholds',
       label: 'Ngưỡng cảnh báo',
       children: (
@@ -105,6 +93,18 @@ const Setting = () => {
         />
       ),
     },
+    // {
+    //   key: 'prompt',
+    //   label: 'Cài đặt Prompt',
+    //   children: (
+    //     <PromptSetting
+    //       loading={loading}
+    //       operation={operation}
+    //       initialValues={prompt}
+    //       onSave={handleSavePrompt}
+    //     />
+    //   ),
+    // },
   ];
 
   return (
