@@ -302,7 +302,7 @@ export const ttnApi = {
   appId: "huuloc-datotnghiep-0",
   sendDownlink: async (deviceId, cmd, confirmed = true) => {
     try {
-      const response = await api.post('/ttn', { deviceId, cmd, appId: ttnApi.appId, confirmed, type: 'replace' });
+      const response = await api.post('/ttn', { deviceId, cmd, appId: ttnApi.appId, confirmed, type: 'push' });
       return response.data;
     } catch (error) {
       console.error('Error sending downlink:', error);
