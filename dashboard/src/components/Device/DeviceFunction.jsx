@@ -57,13 +57,13 @@ const DeviceFunction = ({ deviceId, alertState = false, ledState = false, doorSt
         Cảnh báo
       </Button> */}
 
-      <Button
+      {/* <Button
         type={doorState ? "primary" : "default"}
         icon={doorState ? <WindowsFilled /> : <WindowsOutlined />}
         onClick={toggleDoor}
       >
         {doorState ? 'Tắt Servo' : 'Bật Servo'}
-      </Button>
+      </Button> */}
     </div>
   );
 };
